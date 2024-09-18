@@ -1,0 +1,186 @@
+
+
+use bytes::{Buf, BytesMut, BufMut};
+use uuid::Uuid;
+
+pub fn read_varint(buf: &mut &[u8]) -> i32 {
+    let mut value = 0;
+    let mut shift = 0;
+    while let Some(&byte) = buf.get(0) {
+        let byte = byte;
+        *buf = &buf[1..];
+        value |= ((byte & 0x7F) as i32) << shift;
+        if (byte & 0x80) == 0 {
+            break;
+        }
+        shift += 7;
+    }
+    value
+
+}
+
+pub fn read_packet_data(buf: &mut &[u8], length: usize) -> Result<BytesMut, &'static str> {
+    if buf.len() < length {
+        return Err("No hay suficientes datos en el buffer");
+    }
+
+    let mut data = BytesMut::with_capacity(length);
+    data.extend_from_slice(&buf[..length]);
+    *buf = &buf[length..];
+    Ok(data)
+}
+
+pub fn read_int_2(reader: &mut impl Buf) -> Result<i32, &'static str> {
+    let mut value = 0;
+    let mut position = 0;
+    
+    while position < 5 {
+        if reader.remaining() == 0 {
+            return Err("Buffer insuficiente para leer un VarInt");
+        }
+        
+        let byte = reader.get_u8();
+        // Asegúrate de que el desplazamiento se aplique correctamente
+        value |= ((byte & 0x7F) as i32) << (position * 7);
+        position += 1;
+        
+        if (byte & 0x80) == 0 {
+            return Ok(value);
+        }
+    }
+    
+    Err("VarInt demasiado largo")
+}
+
+
+
+pub fn read_string_2(buf: &mut &[u8]) -> String {
+    let length = read_varint(buf) as usize;
+    let result = String::from_utf8(buf[..length].to_vec()).unwrap();
+    *buf = &buf[length..];
+    result
+}
+pub fn put_varint(buf: &mut BytesMut, value: i32) {
+    let mut value = value as u32;
+    while value >= 0x80 {
+        buf.put_u8((value & 0x7F) as u8 | 0x80);
+        value >>= 7;
+    }
+    buf.put_u8(value as u8);
+}
+
+
+
+// Lee una cadena con longitud máxima específica
+pub fn read_string_with_max_length(buf: &mut &[u8], max_length: usize) -> Result<String, String> {
+    let mut bytes = Vec::new(); // Para almacenar los bytes de la cadena
+
+    // Lee bytes del buffer uno por uno
+    while let Some(&byte) = buf.get(0) {
+        bytes.push(byte); // Agrega el byte al Vec
+        *buf = &buf[1..]; // Avanza el puntero del buffer
+
+        // Intenta convertir los bytes acumulados a UTF-8 para verificar si es una cadena válida
+        match String::from_utf8(bytes.clone()) {
+            Ok(s) => {
+                // Si la cadena es válida, verifica su longitud
+                if s.len() > max_length {
+                    return Err(format!(
+                        "Error: La longitud de la cadena {} excede el máximo permitido de {}.",
+                        s.len(),
+                        max_length
+                    ));
+                }
+            }
+            Err(_) => {
+                // Si no es una cadena UTF-8 válida, continúa leyendo bytes hasta que lo sea o no haya más bytes
+                continue;
+            }
+        }
+    }
+
+    // Intentar convertir los bytes acumulados a una cadena UTF-8 válida
+    String::from_utf8(bytes).map_err(|e| format!("Error al convertir los bytes a UTF-8: {}", e))
+}
+
+
+
+// Lee un entero de tamaño fijo (por ejemplo, i32 o i64)
+pub fn read_fixed_int(buf: &mut &[u8], byte_size: usize) -> i64 {
+    assert!(byte_size <= 8, "byte_size must be between 1 and 8");
+
+    let mut value: i64 = 0;
+    for i in 0..byte_size {
+        if let Some(&byte) = buf.get(i) {
+            value |= (byte as i64) << (i * 8);
+        }
+    }
+
+    *buf = &buf[byte_size..]; // Avanza el puntero del buffer
+    value
+}
+
+pub fn read_int(buf: &mut &[u8]) -> i32 {
+    let mut num_read = 0;
+    let mut result = 0;
+    loop {
+        if buf.is_empty() {
+            return result;
+        }
+        let byte = buf.get_u8();
+        result |= ((byte & 0x7F) as i32) << (7 * num_read);
+        num_read += 1;
+        if byte & 0x80 == 0 {
+            break;
+        }
+    }
+    result
+}
+
+
+pub fn read_string(buf: &mut &[u8]) -> String {
+    let length = read_int(buf) as usize;
+    let result = String::from_utf8(buf[..length].to_vec()).unwrap();
+    *buf = &buf[length..];
+    result
+}
+
+pub fn read_unsignedshort(buf: &mut &[u8]) -> u16 {
+    let result = buf.get_u16();
+    result
+}
+
+
+pub fn write_int(buf: &mut BytesMut, mut value: i32) {
+    loop {
+        if (value & !0x7F) == 0 {
+            buf.put_u8(value as u8);
+            break;
+        } else {
+            buf.put_u8((value & 0x7F | 0x80) as u8);
+            value >>= 7;
+        }
+    }
+}
+
+pub fn write_long(buf: &mut BytesMut, value: i64) {
+    buf.put_i64_le(value); // Utiliza little-endian si es necesario
+}
+
+pub fn read_long(buf: &mut &[u8]) -> i64 {
+    buf.get_i64_le() // Utiliza little-endian si es necesario
+}
+
+pub fn read_uuid(buf: &mut &[u8]) -> Uuid {
+    // Asegúrate de que el buffer tenga al menos 16 bytes
+    assert!(buf.len() >= 16, "El buffer debe tener al menos 16 bytes para un UUID");
+
+    // Tomar los primeros 16 bytes del buffer
+    let uuid_bytes: [u8; 16] = buf[0..16].try_into().expect("Error al convertir a UUID");
+
+    // Avanzar el puntero del buffer 16 bytes
+    *buf = &buf[16..];
+
+    // Crear un UUID a partir de los bytes
+    Uuid::from_bytes(uuid_bytes)
+}

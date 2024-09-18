@@ -1,0 +1,21 @@
+[package]
+name = "hexa_server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sysinfo = { version = "0.31"}
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
+rayon = "1.5.1"
+bytes = "1"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+hexa_protocol = { path = "../HexaProtocols/HexaProtocol" }
+byteorder = "1.4"
+uuid = "1.5"
+rsa = "0.8.0"
+rand = "0.8"
+spki = "0.6"
+[lib]
+path = "src/lib.rs"

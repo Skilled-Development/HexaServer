@@ -1,0 +1,12 @@
+[package]
+name = "HexaStresser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+bytes = "1.1"
+
+[[bin]]
+name = "hexa_stresser"
+path = "src/test2.rs"

@@ -1,0 +1,18 @@
+[package]
+name = "hexa_test"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+sysinfo = { version = "0.31"}
+tokio = { version = "1", features = ["full"] }
+hexa_server = { path = "C:/Users/jvchi/CARPETAS/SkilledDevelopment/HexaServer/HexaServer" }
+bytes = "1.1"
+hexa_protocol_1_21 = { path = "C:/Users/jvchi/CARPETAS/SkilledDevelopment/HexaServer/HexaProtocols/HexaProtocol_1_21"}
+
+
+[[bin]]
+name = "hexa_test"
+path = "src/HexaTest.rs"
+[package.metadata]
+dev_script = "RUST_BACKTRACE=1 cargo run"

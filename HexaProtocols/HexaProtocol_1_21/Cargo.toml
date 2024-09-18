@@ -1,0 +1,12 @@
+[package]
+name = "hexa_protocol_1_21"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+hexa_protocol = { path = "../HexaProtocol" }
+uuid = "1.5"
+
+
+[lib]
+path = "src/lib.rs"
