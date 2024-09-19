@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::BytesMut;
-use hexa_protocol::{protocol_util, PacketReader};
+use hexa_protocol::{protocol_util, Packet, PacketBuilder, PacketReader};
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 extern crate rsa;
 extern crate rand;
@@ -81,29 +81,12 @@ fn create_packet(public_key: &RsaPublicKey, verify_token: &[u8]) -> Vec<u8> {
 
 async fn send_login_success_packet(socket: &mut tokio::net::TcpStream, username: &str, uuid_string: String) -> Result<(), String> {
     let player_uuid = Uuid::parse_str(&uuid_string).unwrap();
-
-    let mut response_packet = BytesMut::new();
-    protocol_util::write_varint(&mut response_packet, 0x02); // Packet ID 0x02 (Login Success)
-
-    // Escribir el UUID del jugador
-    protocol_util::write_uuid(&mut response_packet, player_uuid);
-
-    // Escribir el nombre de usuario (con una longitud máxima de 16 caracteres)
-    protocol_util::write_string(&mut response_packet, username);
-
-    // Escribir la cantidad de propiedades (0 en modo offline)
-    protocol_util::write_varint(&mut response_packet, 0); // No properties in offline mode
-
-    // Strict Error Handling - Lo ajustamos a `false` (no desconectar si hay errores)
-    protocol_util::write_boolean(&mut response_packet, false);
-
-    // Crear el paquete final que contiene la longitud del paquete
-    let mut packet = BytesMut::new();
-    protocol_util::write_varint(&mut packet, response_packet.len() as i32); // Longitud del paquete
-    packet.extend_from_slice(&response_packet);
-
-    // Enviar el paquete al cliente
-    socket.write_all(&packet).await.map_err(|e| format!("Error al enviar el paquete de Login Success: {:?}", e))?;
+    PacketBuilder::new(0x02)
+        .write_uuid(player_uuid)
+        .write_string(username)
+        .write_varint(0)
+        .write_boolean(false)
+        .send(socket).await?;
 
     Ok(())
 }

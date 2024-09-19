@@ -18,6 +18,11 @@ pub mod packets_handler{
         pub mod cookie_request_handler;
     }
 }
+pub mod server_config;
+pub mod monitor;
+
+pub use monitor::Monitor;
+pub use server_config::ServerConfig;
 pub use player_connection::PlayerConnection;
 pub use protocol_thread::ProtocolThread;
 pub use hexa_server::HexaServer; 

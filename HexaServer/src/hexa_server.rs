@@ -1,72 +1,88 @@
-use std::sync::Arc;
-use crate::ProtocolThread;
+use std::{
+    sync::{Arc, RwLock},
+    process,
+};
+use crate::{Monitor, ProtocolThread};
 use hexa_protocol::ServerVersion;
-use sysinfo::System;
 
-#[derive(Clone)]
 pub struct HexaServer {
-    pub versions: Vec<Arc<dyn ServerVersion + Send + Sync>>,
-    pub server_name: String,
+    server_config: Arc<RwLock<crate::ServerConfig>>,
+    pid: Option<usize>, // Agregamos el campo PID para almacenar el ID del proceso
 }
 
 impl HexaServer {
-    pub fn new(server_name: String) ->Self {
+    pub fn new(server_name: String) -> Self {
         HexaServer {
-            server_name,
-            versions: Vec::new(),
+            server_config: Arc::new(RwLock::new(crate::ServerConfig::new(
+                25565,
+                "localhost".to_string(),
+                server_name,
+                20,
+                "A Minecraft Server".to_string(),
+            ))),
+            pid: None, 
         }
     }
 
+    pub fn init_pid(&mut self) {
+        self.pid = Some(process::id() as usize); 
+    }
+
+    
+
     pub fn add_version(&mut self, version: Arc<dyn ServerVersion + Send + Sync>) {
-        self.versions.push(version);
+        self.server_config.write().unwrap().versions.push(version);
     }
 
     pub fn set_server_name(&mut self, server_name: String) {
-        self.server_name = server_name;
+        self.server_config.write().unwrap().server_name = server_name;
     }
 
     pub fn get_server_name(&self) -> String {
-        self.server_name.clone()
+        self.server_config.read().unwrap().server_name.clone()
     }
 
     pub async fn start(&mut self) {
-        if self.versions.is_empty() {
+        self.init_pid();
+
+        let versions = self.server_config.read().unwrap().versions.clone();
+        if versions.is_empty() {
             println!("No versions available. Shutting down HexaServer...");
             return;
         }
-    
+
         println!(
             "HexaServer is starting with {} versions...",
-            self.versions.len()
+            versions.len()
         );
-    
-        let _system = System::new_all();
-        let _pid = std::process::id(); // PID del proceso actual
-        let mut versions_vector: Vec<i32> = Vec::new();
-    
-        for version in &self.versions {
-            versions_vector.push(version.protocol());
-        }
-    
+
+        let versions_vector: Vec<i32> = versions.iter().map(|v| v.protocol()).collect();
+        let mut monitor_thread = Monitor::new(self.pid.unwrap().try_into().unwrap());
+        let _monitor_handle = tokio::spawn(async move {
+            monitor_thread.start_memory_monitor().await;
+        });
+
         let mut protocol_thread = ProtocolThread::new(
             25565,
             "0.0.0.0".to_string(),
-            self.server_name.clone(),
+            self.server_config.read().unwrap().server_name.clone(),
             versions_vector,
+            Arc::clone(&self.server_config),
         );
+
         
-        // Spawning the protocol thread
+
         let protocol_handle = tokio::spawn(async move {
             protocol_thread.start().await;
         });
+
     
         tokio::select! {
             _ = protocol_handle => {
                 println!("Protocol thread has finished.");
             }
         }
-    
+
         println!("HexaServer has stopped.");
     }
-    
 }

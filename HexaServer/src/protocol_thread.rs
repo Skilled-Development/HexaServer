@@ -3,29 +3,32 @@ use std::{collections::HashMap, sync::Arc};
 use bytes::{Buf, BytesMut};
 use tokio::{io::AsyncReadExt, net::{TcpListener, TcpStream}, sync::Mutex};
 
-use crate::{packets_handler::{configuration_handler::{client_information_handler, cookie_request_handler, server_bound_configuration_handler}, handshake_handler::{handshake_handler, ping_request_handler}, login_handler::{login_acknowledgement_handler, login_start_handler}}, player_connection::ClientState, PlayerConnection};
+use crate::{packets_handler::{configuration_handler::{client_information_handler, cookie_request_handler, server_bound_configuration_handler}, handshake_handler::{handshake_handler, ping_request_handler}, login_handler::{login_acknowledgement_handler, login_start_handler}}, player_connection::ClientState, PlayerConnection, ServerConfig};
 
-pub struct ProtocolThread {
+pub struct ProtocolThread{
     pub port: u16,
     pub address: String,
     clients: std::collections::HashMap<String, Arc<Mutex<PlayerConnection>>>,
     pub server_name: String,
-    pub server_versions: Vec<i32>
+    pub server_versions: Vec<i32>,
+    pub server_config: Arc<std::sync::RwLock<ServerConfig>>,
 }
 
-impl ProtocolThread {
+impl ProtocolThread{
     pub fn new(
         port: u16,
         address: String,
         server_name: String,
         server_versions: Vec<i32>,
+        server_config: Arc<std::sync::RwLock<ServerConfig>>,
     ) -> ProtocolThread {
         let protocol_thread = ProtocolThread {
             port,
             address,
             clients: HashMap::new(),
             server_name,
-            server_versions
+            server_versions,
+            server_config
         };
         protocol_thread
     }
