@@ -17,12 +17,12 @@ pub mod packets {
     }
 }
 pub mod packet_reader;
-
+pub mod packet_builder;
 
 pub use packets::packet::Packet;
 pub use packets::packet_type::PacketType;
 pub use packets::client::handshake::handshaking_packet::HandshakingPacket;
 pub use packets::server::server_list::status_response_packet::StatusResponsePacket;
 pub use packet_reader::PacketReader;
-pub use protocol_util::{read_varint, read_int,read_long,write_boolean,write_int,read_unsigned_short,read_string};
 pub use server_version::ServerVersion;
+pub use packet_builder::PacketBuilder;

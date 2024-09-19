@@ -1,5 +1,5 @@
 use bytes::{Buf, BytesMut};
-use hexa_protocol::protocol_util;
+use hexa_protocol::{packet_builder, protocol_util};
 use serde_json::json;
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 
@@ -53,17 +53,10 @@ pub async fn handle(length: i32,buffer: &mut BytesMut, socket: &mut TcpStream,cl
            "favicon": "data:image/png;base64,...",
            "enforcesSecureChat": false
        });
-
        let response_str = serde_json::to_string(&response).unwrap();
-       let mut response_packet = BytesMut::new();
-       protocol_util::write_varint(&mut response_packet, 0x00);
-       protocol_util::write_varint(&mut response_packet, response_str.len() as i32);
-       response_packet.extend_from_slice(response_str.as_bytes());
-
-       let mut packet = BytesMut::new();
-       protocol_util::write_varint(&mut packet, response_packet.len() as i32);
-       packet.extend_from_slice(&response_packet);
-       socket.write_all(&packet).await.unwrap();
+       packet_builder::PacketBuilder::new(0x00)
+           .write_string( response_str.as_str())
+           .send(socket).await?;
        }
        Ok(())
 }
