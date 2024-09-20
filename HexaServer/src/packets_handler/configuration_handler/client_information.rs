@@ -1,6 +1,6 @@
 
 use bytes::{BufMut, BytesMut};
-use hexa_protocol::{protocol_util, PacketReader};
+use hexa_protocol::{protocol_util, PacketBuilder, PacketReader};
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 extern crate rsa;
 extern crate rand;
@@ -46,15 +46,19 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
 
 
 
-    let mut response_packet = BytesMut::new();
+   /* let mut response_packet = BytesMut::new();
     protocol_util::write_varint(&mut response_packet, 0x00); 
     protocol_util::write_identifier(&mut response_packet, client.get_uuid().to_string());
     let mut packet = BytesMut::new();
     protocol_util::write_varint(&mut packet, response_packet.len() as i32);
     packet.extend_from_slice(&response_packet);
-    socket.write_all(&packet).await.map_err(|e| format!("Error al enviar el paquete de ping: {:?}", e))?;
-    println!("Spawn entity packet sent");
-    
+    socket.write_all(&packet).await.map_err(|e| format!("Error al enviar el paquete de ping: {:?}", e))?;*/
+
+    //Send clientbound knonw packs packet
+    let packet_id = 0x0E;  // Según el protocolo
+    let mut packet_builder = PacketBuilder::new(packet_id);
+    packet_builder.write_varint(0); // Known Pack Count (0 packs)
+    packet_builder.send(socket).await?;
     Ok(())
 }
 async fn send_finish_configuration(socket: &mut tokio::net::TcpStream) -> Result<(), String> {

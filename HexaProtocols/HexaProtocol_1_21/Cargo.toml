@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+crab_nbt = "0.2.2"
 hexa_protocol = { path = "../HexaProtocol" }
 uuid = "1.5"
 

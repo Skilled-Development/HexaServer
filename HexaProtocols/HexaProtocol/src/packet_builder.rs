@@ -69,6 +69,10 @@ impl PacketBuilder {
         }
         self
     }
+    pub fn write_unsigned_short(&mut self, value: u16) -> &mut Self {
+        self.buffer.put_u16(value);
+        self
+    }
     pub fn write_varint(&mut self, mut value: i32) -> &mut Self {
         while (value & 0xFFFFFF80u32 as i32) != 0 {
             self.buffer.put_u8((value as u8 & 0x7F) | 0x80); 

@@ -3,7 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use bytes::{Buf, BytesMut};
 use tokio::{io::AsyncReadExt, net::{TcpListener, TcpStream}, sync::Mutex};
 
-use crate::{packets_handler::{configuration_handler::{client_information_handler, cookie_request_handler, server_bound_configuration_handler}, handshake_handler::{handshake_handler, ping_request_handler}, login_handler::{login_acknowledgement_handler, login_start_handler}}, player_connection::ClientState, PlayerConnection, ServerConfig};
+use crate::{packets_handler::{configuration_handler::{client_information, cookie_request, server_bound_configuration, server_bound_known_packs}, handshake_handler::{handshake, ping_request}, login_handler::{login_acknowledgement, login_start}}, player_connection::ClientState, PlayerConnection, ServerConfig};
 
 pub struct ProtocolThread{
     pub port: u16,
@@ -138,9 +138,10 @@ impl ProtocolThread{
         client: &mut PlayerConnection, 
         ) -> Result<(), String> {
         match packet_id{
-            0x00 => return client_information_handler::handle(length,buffer,socket,client).await,
-            0x01 => return cookie_request_handler::handle(length,buffer,socket,client).await,
-            0x02 => return server_bound_configuration_handler::handle(length,buffer,socket,client).await,
+            0x00 => return client_information::handle(length,buffer,socket,client).await,
+            0x01 => return cookie_request::handle(length,buffer,socket,client).await,
+            0x02 => return server_bound_configuration::handle(length,buffer,socket,client).await,
+            0x07 => return server_bound_known_packs::handle(length,buffer,socket,client).await,
             _ => println!("Unknown packet ID: {} in configuration handler", packet_id),
         }
         Ok(())
@@ -148,8 +149,8 @@ impl ProtocolThread{
 
     pub async fn login_handler( packet_id: i32, length: i32,buffer: &mut BytesMut,socket: &mut TcpStream, client: &mut PlayerConnection,  ) -> Result<(), String> {
         match packet_id{
-            0x00 => return login_start_handler::handle(length,buffer,socket,client).await,
-            0x03 => return login_acknowledgement_handler::handle(length,buffer,socket,client).await,
+            0x00 => return login_start::handle(length,buffer,socket,client).await,
+            0x03 => return login_acknowledgement::handle(length,buffer,socket,client).await,
             _ => println!("Unknown packet ID: {} in login handler", packet_id),
         }
         Ok(())
@@ -162,8 +163,8 @@ impl ProtocolThread{
         client: &mut PlayerConnection, 
         ) -> Result<(), String> {
         match packet_id{
-            0x00 => return handshake_handler::handle(length,buffer,socket,client).await,
-            0x01 => return ping_request_handler::handle(length,buffer,socket,client).await,
+            0x00 => return handshake::handle(length,buffer,socket,client).await,
+            0x01 => return ping_request::handle(length,buffer,socket,client).await,
             _ => println!("Unknown packet ID: {} in handshake_handler", packet_id),
         }
         Ok(())

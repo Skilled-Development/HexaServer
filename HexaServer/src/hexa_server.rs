@@ -42,9 +42,16 @@ impl HexaServer {
         self.server_config.read().unwrap().server_name.clone()
     }
 
+
+
     pub async fn start(&mut self) {
         self.init_pid();
-
+        if self.server_config.read().unwrap().enable_monitoring{
+            let mut monitor_thread = Monitor::new(self.pid.unwrap().try_into().unwrap());
+            let _monitor_handle = tokio::spawn(async move {
+                monitor_thread.start_memory_monitor().await;
+            });
+        }   
         let versions = self.server_config.read().unwrap().versions.clone();
         if versions.is_empty() {
             println!("No versions available. Shutting down HexaServer...");
@@ -57,10 +64,7 @@ impl HexaServer {
         );
 
         let versions_vector: Vec<i32> = versions.iter().map(|v| v.protocol()).collect();
-        let mut monitor_thread = Monitor::new(self.pid.unwrap().try_into().unwrap());
-        let _monitor_handle = tokio::spawn(async move {
-            monitor_thread.start_memory_monitor().await;
-        });
+        
 
         let mut protocol_thread = ProtocolThread::new(
             25565,

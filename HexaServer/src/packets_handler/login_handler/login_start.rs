@@ -2,8 +2,8 @@ use std::io::Cursor;
 
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::BytesMut;
-use hexa_protocol::{protocol_util, Packet, PacketBuilder, PacketReader};
-use tokio::{io::AsyncWriteExt, net::TcpStream};
+use hexa_protocol::{ PacketBuilder, PacketReader};
+use tokio:: net::TcpStream;
 extern crate rsa;
 extern crate rand;
 extern crate byteorder;
@@ -11,12 +11,13 @@ extern crate byteorder;
 use rsa::{RsaPrivateKey, RsaPublicKey};
 use rand::rngs::OsRng;
 use rsa::pkcs1::EncodeRsaPublicKey;
-use uuid::{Uuid};
+use uuid::Uuid;
 
-use crate::{player_connection, PlayerConnection};
+use crate::PlayerConnection;
 // Asumiendo que tienes estas funciones
 
 pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {
+    let _ = length;
     let mut reader = PacketReader::new(buffer);
     let username = reader.read_string();
     println!("Username: {}", username);
@@ -37,7 +38,7 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
 
 
 // Función para generar las claves y el verify token
-fn generate_keys() -> (RsaPublicKey, Vec<u8>) {
+fn _generate_keys() -> (RsaPublicKey, Vec<u8>) {
     let mut rng = OsRng;
     let bits = 1024;
     let private_key = RsaPrivateKey::new(&mut rng, bits).expect("Error al generar clave privada");
@@ -48,7 +49,7 @@ fn generate_keys() -> (RsaPublicKey, Vec<u8>) {
 }
 
 // Función para crear el paquete con public key y verify token
-fn create_packet(public_key: &RsaPublicKey, verify_token: &[u8]) -> Vec<u8> {
+fn _create_packet(public_key: &RsaPublicKey, verify_token: &[u8]) -> Vec<u8> {
     
     let mut packet = Vec::new();
     

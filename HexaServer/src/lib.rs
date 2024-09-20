@@ -5,17 +5,18 @@ pub mod player_connection;
 pub mod protocol_thread;
 pub mod packets_handler{
     pub mod handshake_handler{
-        pub mod handshake_handler;
-        pub mod ping_request_handler;
+        pub mod handshake;
+        pub mod ping_request;
     }
     pub mod login_handler{
-        pub mod login_start_handler;
-        pub mod login_acknowledgement_handler;
+        pub mod login_start;
+        pub mod login_acknowledgement;
     }
     pub mod configuration_handler{
-        pub mod server_bound_configuration_handler;
-        pub mod client_information_handler;
-        pub mod cookie_request_handler;
+        pub mod server_bound_configuration;
+        pub mod client_information;
+        pub mod cookie_request;
+        pub mod server_bound_known_packs;
     }
 }
 pub mod server_config;

@@ -9,6 +9,7 @@ pub struct ServerConfig{
     pub max_players: i32,
     pub motd: String,
     pub versions: Vec<Arc<dyn ServerVersion + Send + Sync>>,
+    pub enable_monitoring: bool,
 }
 
 impl ServerConfig{
@@ -20,6 +21,7 @@ impl ServerConfig{
             max_players,
             motd,
             versions: Vec::new(),
+            enable_monitoring: false,
         }
     }
     

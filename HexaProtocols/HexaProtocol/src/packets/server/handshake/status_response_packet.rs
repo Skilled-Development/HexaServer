@@ -1,7 +1,7 @@
-use bytes::BytesMut;
+
 use serde_json::json;
 
-use crate::protocol_util;
+use crate::{packet_builder, Packet, PacketBuilder, PacketType};
 
 pub struct StatusResponsePacket{
     pub server_name: String,
@@ -9,7 +9,16 @@ pub struct StatusResponsePacket{
     pub server_protocols: Vec<i32>
 
 }
+impl Packet for StatusResponsePacket {
+    fn get_packet_id(&self) -> i32 {
+        0x00 // 0 
+    }
+    fn get_packet_type(&self) -> PacketType{
+        PacketType::SERVER
+    }
+    
 
+}
 impl StatusResponsePacket{
 
     pub fn new(server_name:String,player_protocol:i32,server_protocols:Vec<i32>) -> StatusResponsePacket{
@@ -20,7 +29,7 @@ impl StatusResponsePacket{
         }
     }
 
-    pub fn generate_packet(&self) -> BytesMut{
+    pub fn build(&self) -> PacketBuilder{
         let mut _new_server_name = self.server_name.clone();
         let _protocol = if self.server_protocols.contains(&self.player_protocol) {
             self.player_protocol
@@ -67,15 +76,9 @@ impl StatusResponsePacket{
         });
 
         let response_str = serde_json::to_string(&response).unwrap();
-        let mut response_packet = BytesMut::new();
-        protocol_util::write_int(&mut response_packet, 0x00);
-        protocol_util::write_int(&mut response_packet, response_str.len() as i32);
-        response_packet.extend_from_slice(response_str.as_bytes());
-
-        let mut packet = BytesMut::new();
-        protocol_util::write_int(&mut packet, response_packet.len() as i32);
-        packet.extend_from_slice(&response_packet);
-
+        let mut packet = packet_builder::PacketBuilder::new(self.get_packet_id());
+        packet.write_string(response_str.as_str());
         packet
-    }
+        }
+    
 }

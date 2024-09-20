@@ -36,7 +36,7 @@ impl Monitor{
             println!("=== Process Monitoring (PID: {}) ===", self.pid);
             println!("Physical memory used: {:.2} MB", memory as f64 / 1024.0 / 1024.0);
             println!("Virtual memory used: {:.2} MB", virtual_memory as f64 / 1024.0 / 1024.0);
-            println!("CPU usage: {:.2}%", cpu_usage);
+            println!("CPU usage: {:.4}%", cpu_usage);
             println!("=======================================");
         } else {
             println!("Could not find the process with PID: {}", self.pid);

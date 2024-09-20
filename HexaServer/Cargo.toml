@@ -17,5 +17,6 @@ uuid = "1.5"
 rsa = "0.8.0"
 rand = "0.8"
 spki = "0.6"
+crab_nbt = "0.2.2"
 [lib]
 path = "src/lib.rs"
