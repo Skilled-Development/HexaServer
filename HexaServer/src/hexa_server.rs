@@ -80,6 +80,7 @@ impl HexaServer {
 
         let protocol_handle = tokio::spawn(async move {
             protocol_thread.start().await;
+
         });
 
     

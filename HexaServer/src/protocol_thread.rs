@@ -8,7 +8,7 @@ use crate::{packets_handler::{configuration_handler::{client_information, cookie
 pub struct ProtocolThread{
     pub port: u16,
     pub address: String,
-    clients: std::collections::HashMap<String, Arc<Mutex<PlayerConnection>>>,
+    clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
     pub server_name: String,
     pub server_versions: Vec<i32>,
     pub server_config: Arc<std::sync::RwLock<ServerConfig>>,
@@ -25,7 +25,7 @@ impl ProtocolThread{
         let protocol_thread = ProtocolThread {
             port,
             address,
-            clients: HashMap::new(),
+            clients: Arc::new(Mutex::new(HashMap::new())),
             server_name,
             server_versions,
             server_config
@@ -38,16 +38,15 @@ impl ProtocolThread{
         let addr_str = format!("{}:{}", self.address, self.port);
         let listener = TcpListener::bind(addr_str).await.unwrap();
         println!("Servidor de Minecraft escuchando en la ip {} , con en el puerto {}...", self.address, self.port);
-    
+
         loop {
             let (socket, addr) = listener.accept().await.unwrap();
             let ip_address = addr.ip().to_string();
             let port = addr.port();
             println!("-------------------------------------");
             println!("Nueva conexión de {}:{}...", ip_address, port);
-            
-            // Aquí, addr ya contiene la IP y el puerto del cliente
-            let client = self.clients.get(&ip_address).cloned();
+            let address = format!("{}:{}", ip_address, port);
+            let client = self.clients.lock().await.get(&address).cloned();
             let client = match client {
                 Some(client) => client,
                 None => {
@@ -55,32 +54,36 @@ impl ProtocolThread{
                         ip_address.clone(),
                         port,
                     )));
-                    self.clients.insert(client.lock().await.ip_address.clone(), client.clone());
+                    self.clients.lock().await.insert(client.lock().await.ip_address.clone(), client.clone());
                     client
                 }
             };
 
             client.lock().await.set_server_config(self.server_config.clone());
+            let clients = self.clients.clone(); 
             tokio::spawn(async move {
-                Self::handle_client(socket, client).await;
+                let result = Self::handle_client(socket, client).await;
+                if result.is_err() {
+                    let mut clients_lock = clients.lock().await;
+                    clients_lock.remove(&address);
+                    println!("Cliente {} eliminado de la lista de clientes.", address);
+                }
             });
         }
     }
+    
 
 
   
-    pub async fn handle_client(mut socket: TcpStream,  client: Arc<Mutex<PlayerConnection>>) {
+    pub async fn handle_client(mut socket: TcpStream,  client: Arc<Mutex<PlayerConnection>>) -> Result<(), String> {
         let mut buffer = BytesMut::with_capacity(1024);
     
-        // Loop principal para manejar la conexión con el cliente
         loop {
             match socket.read_buf(&mut buffer).await {
                 Ok(0) => {
-                    // Conexión cerrada por el cliente
-                    return;
+                    return Err("error".to_string());
                 }
                 Ok(_) => {
-                    // Procesar los paquetes si hay suficientes datos
                     while buffer.len() > 0 {
                         println!("===============================================");
                         println!("Procesando paquete...");
@@ -92,17 +95,17 @@ impl ProtocolThread{
                                 println!("Buffer después de procesar: {:?}", buffer);
                                 continue;
                             },
-                            Err(e) if e == "Datos incompletos" => break, // Esperar más datos si no están completos
+                            Err(e) if e == "Datos incompletos" => break,
                             Err(e) => {
                                 println!("Error al procesar el paquete: {:?}", e);
-                                return;
+                                return Err("error".to_string());
                             }
                         }
                     }
                 }
                 Err(e) => {
                     println!("Error al leer del socket: {:?}", e);
-                    return;
+                    return Err("error".to_string());
                 }
             }
         }
