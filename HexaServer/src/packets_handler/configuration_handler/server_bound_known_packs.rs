@@ -5,6 +5,8 @@ use crate::PlayerConnection;
 use hexa_protocol::{PacketBuilder, PacketReader};
 
 pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {
+    let _ = client;
+    let _ = length;
     let mut reader  = PacketReader::new(buffer);
     let kwnon_packs_count = reader.read_varint();
     println!("Known Packs Count: {}", kwnon_packs_count);

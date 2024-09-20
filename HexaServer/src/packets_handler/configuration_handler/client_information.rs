@@ -11,6 +11,7 @@ use crate::PlayerConnection;
 // Asumiendo que tienes estas funciones
 
 pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {
+    let _ = client;
     let _ = length;
 
     println!("client infor {:?}",buffer);
@@ -61,7 +62,7 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     packet_builder.send(socket).await?;
     Ok(())
 }
-async fn send_finish_configuration(socket: &mut tokio::net::TcpStream) -> Result<(), String> {
+async fn _send_finish_configuration(socket: &mut tokio::net::TcpStream) -> Result<(), String> {
     let mut response_packet = BytesMut::new();
     protocol_util::write_varint(&mut response_packet, 0x03); 
     let mut packet = BytesMut::new();
@@ -119,7 +120,7 @@ async fn send_finish_configuration(socket: &mut tokio::net::TcpStream) -> Result
     Ok(())
 }
 
-async fn send_spawn_entity_packet(
+async fn _send_spawn_entity_packet(
     socket: &mut tokio::net::TcpStream,
     entity_id: i32,
     entity_uuid: Uuid,
