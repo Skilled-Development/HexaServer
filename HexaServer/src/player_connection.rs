@@ -1,3 +1,7 @@
+use std::sync::Arc;
+
+use crate::ServerConfig;
+
 
 #[derive(Eq, Hash, PartialEq, Debug,Clone, Copy)]  // Add Debug trait to ClientState
 pub enum ClientState {
@@ -15,26 +19,26 @@ pub struct PlayerConnection {
     pub id: Option<String>,
     pub name: Option<String>,
     pub ip_address: String,
+    pub port: u16,
     pub client_state: ClientState,
-    pub server_name: String,
-    pub server_versions: Vec<i32>,
     pub username: Option<String>,
     pub uuid: Option<uuid::Uuid>,
+    pub server_config: Option<Arc<std::sync::RwLock<ServerConfig>>>,
 
 }
 
 impl PlayerConnection {
-    pub fn new(ip: String,server_name:String,server_versions:Vec<i32>) -> PlayerConnection {
+    pub fn new(ip: String, port: u16) -> PlayerConnection {
         println!("Creating new connection with IP {}", ip);
         PlayerConnection {
             id: None,
             name: None,
             ip_address: ip,
+             port,
             client_state: ClientState::HANDSHAKE,
-            server_name,
-            server_versions,
             username:None,
             uuid:None,
+            server_config: None,
         }
     }
 
@@ -49,8 +53,13 @@ impl PlayerConnection {
     pub fn get_username(&self) -> String {
         self.username.clone().unwrap()
     }
+    
+    pub fn set_server_config(&mut self, server_config: Arc<std::sync::RwLock<ServerConfig>>) {
 
-
+        self.server_config = Some(server_config);
+    
+    }
+    
     pub fn set_uuid(&mut self, uuid: uuid::Uuid) {
         self.uuid = Some(uuid);
     }

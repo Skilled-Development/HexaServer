@@ -53,20 +53,22 @@ impl ProtocolThread{
                 None => {
                     let client = Arc::new(Mutex::new(PlayerConnection::new(
                         ip_address.clone(),
-                        self.server_name.clone(),
-                        self.server_versions.clone(),
+                        port,
                     )));
                     self.clients.insert(client.lock().await.ip_address.clone(), client.clone());
                     client
                 }
             };
-    
+
+            client.lock().await.set_server_config(self.server_config.clone());
             tokio::spawn(async move {
                 Self::handle_client(socket, client).await;
             });
         }
     }
-    
+
+
+  
     pub async fn handle_client(mut socket: TcpStream,  client: Arc<Mutex<PlayerConnection>>) {
         let mut buffer = BytesMut::with_capacity(1024);
     
@@ -105,6 +107,7 @@ impl ProtocolThread{
             }
         }
     }
+
     
     async fn process_packet(buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {
         if buffer.remaining() < 1 {

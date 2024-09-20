@@ -31,15 +31,17 @@ impl HexaServer {
     
 
     pub fn add_version(&mut self, version: Arc<dyn ServerVersion + Send + Sync>) {
-        self.server_config.write().unwrap().versions.push(version);
+        let mut config_guard = self.server_config.write().unwrap();
+        config_guard.add_version(version);
     }
 
     pub fn set_server_name(&mut self, server_name: String) {
-        self.server_config.write().unwrap().server_name = server_name;
+        let mut config_guard = self.server_config.write().unwrap();
+        config_guard.set_server_name(server_name);
     }
 
     pub fn get_server_name(&self) -> String {
-        self.server_config.read().unwrap().server_name.clone()
+        self.server_config.read().unwrap().get_server_name()
     }
 
 

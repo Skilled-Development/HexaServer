@@ -30,19 +30,19 @@ impl StatusResponsePacket{
     }
 
     pub fn build(&self) -> PacketBuilder{
-        let mut _new_server_name = self.server_name.clone();
-        let _protocol = if self.server_protocols.contains(&self.player_protocol) {
+        let mut new_server_name = self.server_name.clone();
+        let protocol = if self.server_protocols.contains(&self.player_protocol) {
             self.player_protocol
         } else {
-            _new_server_name = String::from("We don't support your MC version");
+            new_server_name = String::from("We don't support your MC version");
             0 // or any default value you want to assign to protocol
         };
 
 
         let response = json!({
             "version": {
-                "name": "1.21",
-                "protocol": 767
+                "name": new_server_name,
+                "protocol": protocol
             },
             "players": {
                 "max": 2024,
