@@ -24,6 +24,7 @@ pub struct PlayerConnection {
     pub username: Option<String>,
     pub uuid: Option<uuid::Uuid>,
     pub server_config: Option<Arc<std::sync::RwLock<ServerConfig>>>,
+    pub protocol_version: Option<i32>,
 
 }
 
@@ -39,7 +40,16 @@ impl PlayerConnection {
             username:None,
             uuid:None,
             server_config: None,
+            protocol_version: None,
         }
+    }
+
+    pub fn set_protocol_version(&mut self, protocol_version: i32) {
+        self.protocol_version = Some(protocol_version);
+    }
+
+    pub fn get_protocol_version(&self) -> i32 {
+        self.protocol_version.clone().unwrap()
     }
 
     pub fn set_client_state(&mut self, client_state: ClientState) {

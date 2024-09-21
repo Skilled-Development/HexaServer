@@ -6,7 +6,12 @@ use crate::{packet_builder, Packet, PacketBuilder, PacketType};
 pub struct StatusResponsePacket{
     pub server_name: String,
     pub player_protocol: i32,
-    pub server_protocols: Vec<i32>
+    pub server_protocols: Vec<i32>,
+    pub motd: serde_json::Value ,
+    pub server_icon: String,
+    pub current_player_count: i32,
+    pub max_player_count: i32,
+    pub sample_text: Option<Vec<String>>
 
 }
 impl Packet for StatusResponsePacket {
@@ -21,11 +26,25 @@ impl Packet for StatusResponsePacket {
 }
 impl StatusResponsePacket{
 
-    pub fn new(server_name:String,player_protocol:i32,server_protocols:Vec<i32>) -> StatusResponsePacket{
+    pub fn new(
+        server_name:String,
+        player_protocol:i32,
+        server_protocols:Vec<i32>,
+        motd:serde_json::Value,
+        server_icon:String,
+        current_player_count:i32,
+        max_player_count:i32,
+        sample_text:Option<Vec<String>>
+    ) -> StatusResponsePacket{
         StatusResponsePacket{
             server_name,
             player_protocol,
-            server_protocols
+            server_protocols,
+            motd,
+            server_icon,
+            current_player_count,
+            max_player_count,
+            sample_text
         }
     }
 
@@ -35,9 +54,19 @@ impl StatusResponsePacket{
             self.player_protocol
         } else {
             new_server_name = String::from("We don't support your MC version");
-            0 // or any default value you want to assign to protocol
+            0
         };
-
+        //create an json array for the sample players
+        let mut sample_players = Vec::new();
+        if let Some(sample_text) = &self.sample_text {
+            for text in sample_text {
+                sample_players.push(json!({
+                    "name": text,
+                    "id": "4566e69f-c907-48ee-8d71-d7ba5aa00d20"
+                }));
+            }
+        }
+        
 
         let response = json!({
             "version": {
@@ -45,33 +74,12 @@ impl StatusResponsePacket{
                 "protocol": protocol
             },
             "players": {
-                "max": 2024,
-                "online": 9,
-                "sample": [
-                    {
-                        "name": "§aProbando",
-                        "id": "4566e69f-c907-48ee-8d71-d7ba5aa00d20"
-                    },
-                    {
-                        "name": "§aEste",
-                        "id": "4566e69f-c907-48ee-8d71-d7ba5aa00d20"
-                    },
-                    {
-                        "name": "§aServidor",
-                        "id": "4566e69f-c907-48ee-8d71-d7ba5aa00d20"
-                    }
-                ]
+                "max": self.max_player_count,
+                "online": self.current_player_count,
+                "sample": sample_players
             },
-            "description": {
-                "text": "",
-                "extra": [
-                    { "text": "Este es ", "color": "red" },
-                    { "text": "un ejemplo ", "color": "green" },
-                    { "text": "de texto ", "color": "blue", "bold": true },
-                    { "text": "con varios colores y estilos." }
-                ]
-            },
-            "favicon": "data:image/png;base64,...",
+            "description": self.motd,
+            "favicon": "data:image/png;base64,".to_string() + &self.server_icon,
             "enforcesSecureChat": false
         });
 

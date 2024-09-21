@@ -19,7 +19,9 @@ pub mod packets {
 }
 pub mod packet_reader;
 pub mod packet_builder;
+pub mod text_component;
 
+pub use text_component::TextComponent;
 pub use packets::packet::Packet;
 pub use packets::packet_type::PacketType;
 pub use packets::client::handshake::handshake_packet::HandshakePacket;

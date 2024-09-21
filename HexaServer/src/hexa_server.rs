@@ -14,11 +14,9 @@ impl HexaServer {
     pub fn new(server_name: String) -> Self {
         HexaServer {
             server_config: Arc::new(RwLock::new(crate::ServerConfig::new(
-                25565,
-                "localhost".to_string(),
                 server_name,
-                20,
-                "A Minecraft Server".to_string(),
+                25565,
+                "localhost".to_string()
             ))),
             pid: None, 
         }
@@ -69,8 +67,8 @@ impl HexaServer {
         
 
         let mut protocol_thread = ProtocolThread::new(
-            25565,
-            "0.0.0.0".to_string(),
+            self.server_config.read().unwrap().server_port,
+            self.server_config.read().unwrap().server_ip.clone(),
             self.server_config.read().unwrap().server_name.clone(),
             versions_vector,
             Arc::clone(&self.server_config),

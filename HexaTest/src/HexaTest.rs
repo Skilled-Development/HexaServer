@@ -12,7 +12,6 @@ async fn main() {
 
     // Add the version to the server
     server.add_version(Arc::new(protocol_1_21));
-
     // Start the server
     server.start().await;
 
