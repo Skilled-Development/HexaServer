@@ -2,7 +2,7 @@ use hexa_server::HexaServer;
 use hexa_protocol_1_21::HexaProtocol1_21;
 use std::sync::Arc;
 #[tokio::main]
-async fn main() 
+async fn main() {
     
      // Create an instance of HexaProtocol1_21
     let protocol_1_21 = HexaProtocol1_21::new();
