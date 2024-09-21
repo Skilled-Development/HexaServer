@@ -16,7 +16,7 @@ impl HexaServer {
             server_config: Arc::new(RwLock::new(crate::ServerConfig::new(
                 server_name,
                 25565,
-                "localhost".to_string()
+                "0.0.0.0".to_string()
             ))),
             pid: None, 
         }
