@@ -73,14 +73,29 @@ impl<'a> PacketReader<'a> {
         self.buf.copy_to_slice(&mut buf);
         String::from_utf8(buf).expect("Invalid UTF-8 string")
     }
-
+    pub fn read_angle(&mut self) -> f32 {
+        // Asegúrate de que haya al menos 1 byte para leer
+        self.ensure_remaining(1);
+        // Lee el byte y conviértelo de nuevo a un ángulo de 0 a 360 grados
+        let encoded_angle = self.read_unsigned_byte();
+        (encoded_angle as f32 / 256.0) * 360.0
+    }
     // Leer un Long (64 bits)
     pub fn read_long_be(&mut self) -> i64 {
         self.ensure_remaining(8); // Asegura que haya al menos 8 bytes en el buffer
         let value = self.buf.get_i64(); // Lee el valor en formato big-endian
         value.to_be() // Convierte el valor a big-endian
     }
+    pub fn read_int(&mut self) -> i32 {
+        self.ensure_remaining(4); // Asegura que haya al menos 4 bytes para leer un entero
+        self.buf.get_i32() // Lee un entero de 32 bits en formato big-endian
+    }
 
+    // Leer un Double (64 bits)
+    pub fn read_double(&mut self) -> f64 {
+        self.ensure_remaining(8); // Asegura que haya al menos 8 bytes para leer un double
+        self.buf.get_f64() // Lee un double de 64 bits en formato big-endian
+    }
     // Leer un UUID (128 bits)
     pub fn read_uuid(&mut self) -> Uuid {
         self.ensure_remaining(16); // Un UUID tiene 16 bytes (128 bits)
