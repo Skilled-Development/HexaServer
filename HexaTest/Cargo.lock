@@ -438,7 +438,6 @@ name = "hexa_test"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "hexa_protocol",
  "hexa_protocol_1_21",
  "hexa_server",
  "sysinfo",

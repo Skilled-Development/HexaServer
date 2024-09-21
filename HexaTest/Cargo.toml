@@ -9,7 +9,6 @@ tokio = { version = "1", features = ["full"] }
 hexa_server = { path = "C:/Users/jvchi/CARPETAS/SkilledDevelopment/HexaServer/HexaServer" }
 bytes = "1.1"
 hexa_protocol_1_21 = { path = "C:/Users/jvchi/CARPETAS/SkilledDevelopment/HexaServer/HexaProtocols/HexaProtocol_1_21"}
-hexa_protocol = { path = "C:/Users/jvchi/CARPETAS/SkilledDevelopment/HexaServer/HexaProtocols/HexaProtocol"}
 
 [[bin]]
 name = "hexa_test"
