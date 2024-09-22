@@ -2,7 +2,7 @@ use bytes::BytesMut;
 use hexa_protocol_1_21::read_data_file_to_bytesmut;
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 
-use crate::{protocol_thread::read_varint, PlayerConnection};
+use crate::PlayerConnection;
 use hexa_protocol::{PacketBuilder, PacketReader};
 
 pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {
