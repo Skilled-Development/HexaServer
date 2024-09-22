@@ -403,6 +403,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "hexa_protocol_1_21"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "crab_nbt",
+ "hexa_protocol",
+ "tokio",
+ "tokio-util",
+ "uuid",
+]
+
+[[package]]
 name = "hexa_server"
 version = "0.1.0"
 dependencies = [
@@ -411,6 +423,7 @@ dependencies = [
  "bytes",
  "crab_nbt",
  "hexa_protocol",
+ "hexa_protocol_1_21",
  "rand",
  "rayon",
  "reqwest",

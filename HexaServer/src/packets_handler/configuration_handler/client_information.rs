@@ -58,7 +58,11 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     //Send clientbound knonw packs packet
     let packet_id = 0x0E;  // Según el protocolo
     let mut packet_builder = PacketBuilder::new(packet_id);
-    packet_builder.write_varint(0); // Known Pack Count (0 packs)
+    packet_builder.write_varint(1); // Known Pack Count (0 packs)
+    packet_builder.write_string("minecraft");
+    packet_builder.write_string("core");
+    packet_builder.write_string("1.21");
+
     packet_builder.send(socket).await?;
     Ok(())
 }

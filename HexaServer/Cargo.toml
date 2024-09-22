@@ -12,6 +12,7 @@ bytes = "1"
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 hexa_protocol = { path = "../HexaProtocols/HexaProtocol" }
+hexa_protocol_1_21 = { path = "../HexaProtocols/HexaProtocol_1_21" }
 byteorder = "1.4"
 uuid = "1.5"
 rsa = "0.8.0"

@@ -198,7 +198,7 @@ impl ProtocolThread{
 
 }
 
-fn read_varint(buffer: &mut BytesMut) -> Result<i32, String> {
+pub fn read_varint(buffer: &mut BytesMut) -> Result<i32, String> {
     if buffer.is_empty() {
         return Err("Datos incompletos: Buffer vacío".to_string());
     }

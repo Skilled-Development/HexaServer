@@ -7,7 +7,12 @@ edition = "2021"
 crab_nbt = "0.2.2"
 hexa_protocol = { path = "../HexaProtocol" }
 uuid = "1.5"
+bytes = "1"
+tokio = { version = "1", features = ["full"] }
+tokio-util = "0.7"
 
+[package.metadata]
+include = ["src/packets_files/registry/*.data"]
 
 [lib]
 path = "src/lib.rs"
