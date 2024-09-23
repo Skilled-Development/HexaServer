@@ -1,7 +1,18 @@
 use bytes::{BufMut, BytesMut};
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
-
+pub enum PacketElement<'a> {
+    Int(i32),
+    Short(i16),
+    Long(i64),
+    String(&'a str),
+    UUID(Uuid),
+    Byte(u8),
+    Boolean(bool),
+    Double(f64),
+    ByteArray(&'a [u8]),
+}
+#[derive(Clone)]
 pub struct PacketBuilder{
     pub buffer: BytesMut,
     pub packet_id: i32,
@@ -57,20 +68,50 @@ impl PacketBuilder {
         self.buffer.extend_from_slice(value); 
         self
     }
-    pub fn write_int(&mut self, mut value: i32) -> &mut Self {
-        loop {
-            if (value & !0x7F) == 0 {
-                self.buffer.put_u8(value as u8);
-                break;
-            } else {
-                self.buffer.put_u8((value & 0x7F | 0x80) as u8);
-                value >>= 7;
-            }
+    pub fn write_int(&mut self, value: i32) -> &mut Self {
+        self.buffer.put_i32(value);
+        self
+    }
+    pub fn write_element(&mut self, element: PacketElement) -> &mut Self {
+        match element {
+            PacketElement::Int(value) => self.write_int(value),
+            PacketElement::Short(value) => self.write_short(value),
+            PacketElement::Long(value) => self.write_long_be(value),
+            PacketElement::String(value) => self.write_string(value),
+            PacketElement::UUID(value) => self.write_uuid(value),
+            PacketElement::Byte(value) => self.write_byte(value),
+            PacketElement::Boolean(value) => self.write_boolean(value),
+            PacketElement::Double(value) => self.write_double(value),
+            PacketElement::ByteArray(value) => self.write_byte_array(value),
         }
+    }
+    pub fn write_float(&mut self, value: f32) -> &mut Self {
+        self.buffer.put_f32(value);
+        self
+    }
+    pub fn write_array(&mut self, array: &[PacketElement]) -> &mut Self {
+        for element in array {
+            match element {
+                PacketElement::Boolean(value) => self.write_boolean(*value),
+                PacketElement::Int(value) => self.write_int(*value),
+                PacketElement::String(value) => self.write_string(value),
+                PacketElement::UUID(value) => self.write_uuid(*value),
+                PacketElement::Byte(value) => self.write_byte(*value),
+                PacketElement::Double(value) => self.write_double(*value),
+                PacketElement::ByteArray(value) => self.write_byte_array(value),
+                PacketElement::Short(value) => self.write_short(*value),
+                PacketElement::Long(value) => self.write_long_be(*value),
+            };
+        }
+
         self
     }
     pub fn write_unsigned_short(&mut self, value: u16) -> &mut Self {
         self.buffer.put_u16(value);
+        self
+    }
+    pub fn write_unsigned_byte(&mut self, value: u8) -> &mut Self {
+        self.buffer.put_u8(value);
         self
     }
     pub fn write_varint(&mut self, mut value: i32) -> &mut Self {
@@ -128,6 +169,7 @@ impl PacketBuilder {
     pub async fn send(&mut self, socket: &mut tokio::net::TcpStream) -> Result<(), String> {
         let packet = self.build();
         socket.write_all(&packet).await.map_err(|e| e.to_string())?;
+        socket.flush().await.unwrap();
         Ok(())
     }
 }

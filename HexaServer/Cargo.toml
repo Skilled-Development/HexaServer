@@ -21,5 +21,6 @@ spki = "0.6"
 crab_nbt = "0.2.2"
 reqwest = { version = "0.12.7", features = ["blocking"] }
 base64 = "0.22.1"
+chrono = "0.4"
 [lib]
 path = "src/lib.rs"

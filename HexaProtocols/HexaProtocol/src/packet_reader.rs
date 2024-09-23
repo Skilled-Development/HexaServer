@@ -21,6 +21,14 @@ impl<'a> PacketReader<'a> {
         self.ensure_remaining(1);
         self.buf.get_u8()
     }
+    pub fn read_short(&mut self) -> i16 {
+        self.ensure_remaining(2);
+        self.buf.get_i16()
+    }
+    pub fn read_float(&mut self) -> f32 {
+        self.ensure_remaining(4);
+        self.buf.get_f32() 
+    }
 
     pub fn read_boolean(&mut self) -> bool {
         self.ensure_remaining(1); // Asegura que haya al menos 1 byte en el buffer

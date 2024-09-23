@@ -4,6 +4,16 @@ pub mod hexa_server;
 pub mod player_connection;
 pub mod protocol_thread;
 pub mod packets_handler{
+    pub mod play_handler{
+        pub mod set_player_position_and_rotation;
+        pub mod set_player_position;
+        pub mod confirm_teletransportation;
+        pub mod ping_request_play;
+        pub mod set_item_held;
+        pub mod swing_arm;
+        pub mod keep_alive;
+        pub mod pick_item;
+    }
     pub mod handshake_handler{
         pub mod handshake;
         pub mod ping_request;
@@ -17,6 +27,7 @@ pub mod packets_handler{
         pub mod client_information;
         pub mod cookie_request;
         pub mod server_bound_known_packs;
+        pub mod aknowlodge_finish_configuration;
     }
 }
 pub mod server_config;
