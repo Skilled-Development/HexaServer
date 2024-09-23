@@ -47,7 +47,7 @@ impl ProtocolThread{
             let ip_address = addr.ip().to_string();
             let port = addr.port();
             println!("-------------------------------------");
-            println!("Nueva conexión de {}:{}...", ip_address, port);
+            println!("New connection from {}:{}..", ip_address, port);
             let address = format!("{}:{}", ip_address, port);
             let client = self.clients.lock().await.get(&address).cloned();
             let client = match client {
@@ -71,7 +71,7 @@ impl ProtocolThread{
                     if result.is_err() {
                         let mut clients_lock = clients.lock().await;
                         clients_lock.remove(&address);
-                        println!("Cliente {} eliminado de la lista de clientes.", address);
+                        println!("Client {} deleted from list of clients.", address);
                     }
                 }
             });
@@ -95,7 +95,7 @@ impl ProtocolThread{
                         let mut client_guard = client.lock().await;
                         match Self::process_packet(&mut buffer, &mut socket, &mut client_guard,clients.clone()).await {
                             Ok(_) => {
-                                println!("Buffer después de procesar: {:?}", buffer);
+                                println!("Buffer after processing: {:?}", buffer);
                                 continue;
                             },
                             Err(e) => {
