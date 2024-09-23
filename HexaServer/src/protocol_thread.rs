@@ -204,6 +204,12 @@ impl ProtocolThread{
                     socket.flush().await.unwrap();
                     Ok(())
                 }
+                0x57=>{
+                    println!("Idk what to do with this packet");
+                    buffer.clear();
+                    socket.flush().await.unwrap();
+                    Ok(())
+                }
                 0x53 =>{
                     println!("Idk what to do with this packet");
                     buffer.clear();
