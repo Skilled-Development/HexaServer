@@ -11,12 +11,10 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     let _ = length;
     if buffer.clone().remaining() < 24 as usize {
         println!("Not enough data to read set player position and rotation packet");
-        println!("");
-        buffer.clear();
-        return Ok(());
+        println!("Buffer remaining: {}, Length: {}", buffer.remaining(), length);
+        //buffer.clear();
+        return Err("not_enough_data".to_string());
     }
-    println!("Length set player position {:?}",length);
-    println!("Buffer lenth set player position {:?}",buffer.clone().remaining());
     let mut reader = PacketReader::new(buffer);
     let x = reader.read_double();
     let y = reader.read_double();

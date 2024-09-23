@@ -21,7 +21,7 @@ async fn send_handshake_packet(mut socket: TcpStream) {
 
     // Enviar paquete
     if let Err(err) = socket.write_all(&final_packet).await {
-        eprintln!("Error al enviar el paquete: {}", err);
+        println!("Error al enviar el paquete: {}", err);
     }
 }
 
@@ -38,7 +38,7 @@ async fn simulate_connections(address: &str, port: u16, num_connections: usize) 
                     send_handshake_packet(socket).await;
                 },
                 Err(err) => {
-                    eprintln!("Error al conectar: {}", err);
+                    println!("Error al conectar: {}", err);
                 }
             }
         }));
@@ -47,7 +47,7 @@ async fn simulate_connections(address: &str, port: u16, num_connections: usize) 
     // Esperar a que todas las tareas se completen
     for task in tasks {
         if let Err(err) = task.await {
-            eprintln!("Error en la tarea: {:?}", err);
+            println!("Error en la tarea: {:?}", err);
         }
     }
 }

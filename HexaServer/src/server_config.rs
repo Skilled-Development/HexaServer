@@ -68,11 +68,11 @@ impl ServerConfig {
                         *icon_base64 = Some(base64_string);
                     }
                     Err(e) => {
-                        eprintln!("Failed to download server icon: {}", e);
+                        println!("Failed to download server icon: {}", e);
                     }
                 },
                 None => {
-                    eprintln!("Server icon URL is not set.");
+                    println!("Server icon URL is not set.");
                 }
             }
         });

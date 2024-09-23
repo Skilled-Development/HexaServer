@@ -12,8 +12,9 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     let _ = length;
     if buffer.remaining() < length as usize {
         println!("Not enough data to read ping request");
-        buffer.clear();
-        return Ok(());
+        println!("Buffer remaining: {}, Length: {}", buffer.remaining(), length);
+        //buffer.clear();
+        return Err("not_enough_data".to_string());
     }
     let mut reader = PacketReader::new(buffer);
     let payload = reader.read_long_be();

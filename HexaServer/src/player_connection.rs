@@ -30,7 +30,7 @@ pub struct PlayerConnection {
 
 impl PlayerConnection {
     pub fn new(ip: String, port: u16) -> PlayerConnection {
-        println!("Creating new connection with IP {}", ip);
+       println!("Creating new connection with IP {}", ip);
         PlayerConnection {
             id: None,
             name: None,

@@ -1,11 +1,11 @@
 use std::{collections::HashMap, sync::Arc, time::Instant};
 
-use bytes::{Buf, BytesMut};
+use bytes::{ Buf, BufMut, BytesMut};
 use hexa_protocol_base::PacketBuilder;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Mutex};
 
 use crate::{packets_handler::{configuration_handler::{aknowlodge_finish_configuration, client_information, cookie_request, server_bound_configuration, server_bound_known_packs}, handshake_handler::{handshake, ping_request}, login_handler::{login_acknowledgement, login_start}, play_handler::{confirm_teletransportation, keep_alive, pick_item, ping_request_play, set_item_held, set_player_position, set_player_position_and_rotation, swing_arm}}, player_connection::ClientState, PlayerConnection, ServerConfig};
-use rand::Rng;
+
 
 pub struct ProtocolThread{
     pub port: u16,
@@ -91,7 +91,7 @@ impl ProtocolThread{
                     while buffer.len() > 0 {
                         println!("===============================================");
                         let mut client_guard = client.lock().await;
-                        match Self::process_packet(&mut buffer, &mut socket, &mut client_guard,clients.clone()).await {
+                        match Self::process_packet(&mut buffer, &mut socket, &mut client_guard, clients.clone()).await {
                             Ok(_) => {
                                 println!("Buffer after processing: {:?}", buffer);
                                 continue;
@@ -124,24 +124,20 @@ impl ProtocolThread{
         println!("Client state: {:?}", client_state);
         if buffer.is_empty() {
             println!("Empty buffer");
-            buffer.clear();
             return Ok(());
         }
         if buffer.remaining() < 1 {
             println!("Uncomplete data 1");
-            buffer.clear();
             return Err("Datos incompletos".to_string());
         }
         if buffer.is_empty() {
             println!("Empty buffer");
-            buffer.clear();
             return Ok(());
         }
         let length = match read_varint(buffer) {
             Ok(len) => len,
             Err(e) => {
                 println!("Error trying to read length: {:?}", e);
-                buffer.clear();
                 return Ok(())
             },
         };
@@ -149,25 +145,37 @@ impl ProtocolThread{
             Ok(id) => id,
             Err(e) => {
                 println!("Error trying to read packet id: {:?}", e);
-                buffer.clear();
                 return Ok(())
             },
         
         };
         println!("Packet ID: {}", packet_id);
         println!("Packet ID: 0x{:X}", packet_id);
-        /*if buffer.remaining() < length as usize {
-            buffer.clear();
-            return Ok(());
-        }*/
-        match client_state {
-            ClientState::HANDSHAKE => Self::handshake_handler(packet_id,length,buffer,socket,  client,clients).await?,
-            ClientState::LOGIN => Self::login_handler(packet_id,length,buffer,socket,  client,clients).await?,
-            ClientState::CONFIGURATION => Self::configuration_handler(packet_id,length,buffer,socket,  client,clients).await?,
-            ClientState::PLAY => Self::play_handler(packet_id,length,buffer,socket,  client,clients).await?,
+        let result: Result<(), String> = match client_state {
+            ClientState::HANDSHAKE => Self::handshake_handler(packet_id,length,buffer,socket,  client,clients).await,
+            ClientState::LOGIN => Self::login_handler(packet_id,length,buffer,socket,  client,clients).await,
+            ClientState::CONFIGURATION => Self::configuration_handler(packet_id,length,buffer,socket,  client,clients).await,
+            ClientState::PLAY => Self::play_handler(packet_id,length,buffer,socket,  client,clients).await,
+        };
+        if result.is_err() {
+            //checkear si el error es not_enough_data
+            let error = result.unwrap_err();
+            if error == "not_enough_data" {
+                let mut tempBuffer = BytesMut::with_capacity(1024);
+                write_varint(&mut tempBuffer, length);
+                write_varint(&mut tempBuffer, packet_id);
+                let bufferClone = buffer.clone();
+                buffer.clear();
+                //add the length and packet id back to the buffer
+                buffer.extend_from_slice(&tempBuffer);
+                //add the rest of the data back to the buffer
+                buffer.extend_from_slice(&bufferClone);
+                let mut readed_buffer= BytesMut::with_capacity(1024);
+                socket.read_buf(&mut readed_buffer).await.unwrap();
+                buffer.extend_from_slice(&readed_buffer);
+                return Ok(());
+            }
         }
-
-    
         Ok(())
     }
 
@@ -258,7 +266,7 @@ impl ProtocolThread{
                     println!("Sent keep alive packet to client {} with alive id {}", client.ip_address, random_id);
                 }
             }else{
-                return Err("Error al procesar el paquete".to_string());
+                return result_on_read;
             }
             Ok(())
         }
@@ -345,3 +353,11 @@ pub fn read_varint(buffer: &mut BytesMut) -> Result<i32, String> {
     Ok(result)
 }
 
+pub fn write_varint(buffer: &mut BytesMut, mut value: i32) -> &mut BytesMut {
+    while (value & 0xFFFFFF80u32 as i32) != 0 {
+        buffer.put_u8((value as u8 & 0x7F) | 0x80); 
+        value >>= 7;                           
+    }
+    buffer.put_u8(value as u8); 
+    buffer
+}
