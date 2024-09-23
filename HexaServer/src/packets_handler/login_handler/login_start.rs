@@ -2,7 +2,7 @@ use std::io::Cursor;
 
 use byteorder::{BigEndian, WriteBytesExt};
 use bytes::BytesMut;
-use hexa_protocol::{ PacketBuilder, PacketReader};
+use hexa_protocol_base::{ PacketBuilder, PacketReader};
 use tokio:: net::TcpStream;
 extern crate rsa;
 extern crate rand;

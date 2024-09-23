@@ -3,7 +3,7 @@ use std::{
     process,
 };
 use crate::{Monitor, ProtocolThread};
-use hexa_protocol::ServerVersion;
+use hexa_protocol_base::ServerVersion;
 
 pub struct HexaServer {
     server_config: Arc<RwLock<crate::ServerConfig>>,

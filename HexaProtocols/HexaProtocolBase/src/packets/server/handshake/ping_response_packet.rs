@@ -1,6 +1,6 @@
 use bytes::BytesMut;
 
-use hexa_protocol_base::{Packet, PacketBuilder, PacketReader, PacketType};
+use crate::{Packet, PacketBuilder, PacketReader, PacketType};
 
 pub struct PingResponsePacket{
     pub ping_payload: i64

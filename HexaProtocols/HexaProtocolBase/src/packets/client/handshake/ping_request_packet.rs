@@ -1,37 +1,41 @@
 use bytes::BytesMut;
 
-use hexa_protocol_base::{Packet, PacketBuilder, PacketReader, PacketType};
+use crate::{Packet, PacketBuilder, PacketReader, PacketType};
 
-pub struct PingResponsePacket{
+pub struct PingRequestPacket{
     pub ping_payload: i64
 }
 
-impl Packet for PingResponsePacket {
+impl Packet for PingRequestPacket {
     fn get_packet_id(&self) -> i32 {
         0x01 // 1
     }
     fn get_packet_type(&self) -> PacketType{
-        PacketType::SERVER
+        PacketType::CLIENT
     }
     
 }
-impl PingResponsePacket{
+impl PingRequestPacket{
 
-    pub fn new(ping_payload:i64) -> PingResponsePacket{
-        PingResponsePacket{
+    pub fn new(ping_payload:i64) -> PingRequestPacket{
+        PingRequestPacket{
             ping_payload
         }
     }
 
-    pub fn read_packet(reader: &mut BytesMut) ->PingResponsePacket {
+    pub fn read_packet(reader: &mut BytesMut) ->PingRequestPacket {
         let mut reader = PacketReader::new(reader);
         let ping_payload = reader.read_long_be();
-        PingResponsePacket::new(ping_payload)
+        PingRequestPacket::new(ping_payload)
     }
 
     pub fn build(&self) -> PacketBuilder {
         let mut writer = PacketBuilder::new(self.get_packet_id());
         writer.write_long_be(self.ping_payload);
         writer
+    }
+
+    pub fn get_payload(&self)-> i64{
+        self.ping_payload
     }
 }

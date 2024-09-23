@@ -1,5 +1,5 @@
 [package]
-name = "hexa_protocol"
+name = "hexa_protocol_base"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,8 +14,6 @@ serde = { version = "1.0", features = ["derive"] }
 crab_nbt = "0.2.2"
 reqwest = { version = "0.12.7", features = ["blocking"] }
 base64 = "0.22.1"
-hexa_protocol_base  = { path = "../HexaProtocolBase" }
-hexa_protocol_1_21 = {path ="../HexaProtocol_1_21"}
 
 [lib]
 path = "src/lib.rs"

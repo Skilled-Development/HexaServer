@@ -2,7 +2,7 @@
 
 
 use bytes:: BytesMut;
-use hexa_protocol::{protocol_util, PacketReader};
+use hexa_protocol_base::{protocol_util, PacketReader};
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 extern crate rsa;
 extern crate rand;

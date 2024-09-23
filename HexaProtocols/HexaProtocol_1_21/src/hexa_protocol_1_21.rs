@@ -1,5 +1,5 @@
 
-use hexa_protocol::ServerVersion;
+use hexa_protocol_base::ServerVersion;
 
 pub struct HexaProtocol1_21 {
     version: String,

@@ -1,7 +1,7 @@
 
 use serde_json::json;
 
-use hexa_protocol_base::{packet_builder, Packet, PacketBuilder, PacketType};
+use crate::{packet_builder, Packet, PacketBuilder, PacketType};
 
 pub struct StatusResponsePacket{
     pub server_name: String,

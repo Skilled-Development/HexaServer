@@ -2,7 +2,8 @@
 use std::{collections::HashMap, sync::Arc};
 
 use bytes::BytesMut;
-use hexa_protocol::{packets::server::handshake::status_response_packet, HandshakePacket, TextComponent};
+use hexa_protocol::{packets::server::handshake::status_response_packet, HandshakePacket};
+use hexa_protocol_base::TextComponent;
 use tokio::{ net::TcpStream, sync::Mutex};
 
 use crate::{player_connection::ClientState, PlayerConnection};

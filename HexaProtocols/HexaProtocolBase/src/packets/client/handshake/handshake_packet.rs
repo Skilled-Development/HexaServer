@@ -1,6 +1,6 @@
 use bytes:: BytesMut;
 
-use hexa_protocol_base::{packets::{packet::Packet, packet_type::PacketType}, PacketBuilder, PacketReader};
+use crate::{packets::{packet::Packet, packet_type::PacketType}, PacketBuilder, PacketReader};
 
 // Import the PlayerConnection type if it is defined in another module
 

@@ -1,5 +1,5 @@
 use bytes::{Buf, BytesMut};
-use hexa_protocol::PacketReader;
+use hexa_protocol_base::PacketReader;
 use tokio::net::TcpStream;
 
 use crate::PlayerConnection;

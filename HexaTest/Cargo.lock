@@ -422,6 +422,8 @@ dependencies = [
  "base64",
  "bytes",
  "crab_nbt",
+ "hexa_protocol_1_21",
+ "hexa_protocol_base",
  "rayon",
  "reqwest",
  "serde",
@@ -437,7 +439,24 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "crab_nbt",
- "hexa_protocol",
+ "hexa_protocol_base",
+ "serde_json",
+ "tokio",
+ "tokio-util",
+ "uuid",
+]
+
+[[package]]
+name = "hexa_protocol_base"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "bytes",
+ "crab_nbt",
+ "rayon",
+ "reqwest",
+ "serde",
+ "serde_json",
  "tokio",
  "tokio-util",
  "uuid",
@@ -454,6 +473,7 @@ dependencies = [
  "crab_nbt",
  "hexa_protocol",
  "hexa_protocol_1_21",
+ "hexa_protocol_base",
  "rand",
  "rayon",
  "reqwest",

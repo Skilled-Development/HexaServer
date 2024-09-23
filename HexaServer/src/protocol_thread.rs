@@ -1,8 +1,7 @@
-use std::{collections::HashMap, sync::Arc};
-use chrono::Utc;
+use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use bytes::{Buf, BytesMut};
-use hexa_protocol::{packet_builder, PacketBuilder};
+use hexa_protocol_base::PacketBuilder;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Mutex};
 
 use crate::{packets_handler::{configuration_handler::{aknowlodge_finish_configuration, client_information, cookie_request, server_bound_configuration, server_bound_known_packs}, handshake_handler::{handshake, ping_request}, login_handler::{login_acknowledgement, login_start}, play_handler::{confirm_teletransportation, keep_alive, pick_item, ping_request_play, set_item_held, set_player_position, set_player_position_and_rotation, swing_arm}}, player_connection::ClientState, PlayerConnection, ServerConfig};
@@ -83,7 +82,6 @@ impl ProtocolThread{
   
     pub async fn handle_client(mut socket: TcpStream,  client: Arc<Mutex<PlayerConnection>>,clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>) -> Result<(), String> {
         let mut buffer = BytesMut::with_capacity(1024);
-    
         loop {
             match socket.read_buf(&mut buffer).await {
                 Ok(0) => {
@@ -125,7 +123,6 @@ impl ProtocolThread{
         let client_state = client.client_state.clone();
         println!("Client state: {:?}", client_state);
         if buffer.is_empty() {
-        
             println!("Empty buffer");
             buffer.clear();
             return Ok(());
@@ -240,7 +237,12 @@ impl ProtocolThread{
                     socket.flush().await.unwrap();
                     Ok(())
                 }
-                _ => todo!("Unknown packet ID: {} in play handler", packet_id),
+                _ => {
+                    println!("Unknown packet ID: {} in play handler", packet_id);
+                    buffer.clear();
+                    socket.flush().await.unwrap();
+                    Ok(())
+                }
             };
 
             if result_on_read.is_ok(){
@@ -252,6 +254,7 @@ impl ProtocolThread{
                     keep_alive_packet.write_long_be(random_id);
                     keep_alive_packet.send(socket).await?;
                     client.set_keep_alive_id(random_id);
+                    client.set_last_keep_alive(Instant::now());
                     println!("Sent keep alive packet to client {} with alive id {}", client.ip_address, random_id);
                 }
             }else{

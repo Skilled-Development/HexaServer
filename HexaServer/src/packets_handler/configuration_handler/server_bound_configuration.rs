@@ -1,5 +1,5 @@
 use bytes::BytesMut;
-use hexa_protocol:: PacketReader;
+use hexa_protocol_base:: PacketReader;
 use tokio:: net::TcpStream;
 extern crate rsa;
 extern crate rand;

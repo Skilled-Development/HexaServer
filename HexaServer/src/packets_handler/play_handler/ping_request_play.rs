@@ -1,7 +1,7 @@
 
 
 use bytes::{Buf, BytesMut};
-use hexa_protocol::PacketReader;
+use hexa_protocol_base::PacketReader;
 use rsa::rand_core::le;
 use tokio::net::TcpStream;
 

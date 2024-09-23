@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::error::Error;
-use hexa_protocol::ServerVersion;
+use hexa_protocol_base::ServerVersion;
 use reqwest::blocking::get;
 use base64::{engine::general_purpose, Engine as _};
 
