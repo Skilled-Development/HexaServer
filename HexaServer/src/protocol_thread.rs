@@ -198,6 +198,12 @@ impl ProtocolThread{
                 0x36 =>  swing_arm::handle(length,buffer,socket,client).await,
                 0x18 =>  keep_alive::handle(length,buffer,socket,client).await,
                 0x20 => pick_item::handle(length,buffer,socket,client).await,
+                0x49 => {
+                    println!("Idk what to do with this packet");
+                    buffer.clear();
+                    socket.flush().await.unwrap();
+                    Ok(())
+                }
                 0x3D => {
                     println!("Idk what to do with this packet");
                     buffer.clear();
