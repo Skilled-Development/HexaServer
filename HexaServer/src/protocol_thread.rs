@@ -149,6 +149,7 @@ impl ProtocolThread{
             },
         
         };
+
         println!("Packet ID: {}", packet_id);
         println!("Packet ID: 0x{:X}", packet_id);
         let result: Result<(), String> = match client_state {
@@ -161,15 +162,15 @@ impl ProtocolThread{
             //checkear si el error es not_enough_data
             let error = result.unwrap_err();
             if error == "not_enough_data" {
-                let mut tempBuffer = BytesMut::with_capacity(1024);
-                write_varint(&mut tempBuffer, length);
-                write_varint(&mut tempBuffer, packet_id);
-                let bufferClone = buffer.clone();
+                let mut temp_buffer = BytesMut::with_capacity(1024);
+                write_varint(&mut temp_buffer, length);
+                write_varint(&mut temp_buffer, packet_id);
+                let buffer_clone = buffer.clone();
                 buffer.clear();
                 //add the length and packet id back to the buffer
-                buffer.extend_from_slice(&tempBuffer);
+                buffer.extend_from_slice(&temp_buffer);
                 //add the rest of the data back to the buffer
-                buffer.extend_from_slice(&bufferClone);
+                buffer.extend_from_slice(&buffer_clone);
                 let mut readed_buffer= BytesMut::with_capacity(1024);
                 socket.read_buf(&mut readed_buffer).await.unwrap();
                 buffer.extend_from_slice(&readed_buffer);
