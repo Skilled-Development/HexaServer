@@ -2,6 +2,7 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use bytes::{ Buf, BufMut, BytesMut};
 use hexa_protocol_base::PacketBuilder;
+use rand::Error;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Mutex};
 
 use crate::{packets_handler::{configuration_handler::{aknowlodge_finish_configuration, client_information, cookie_request, server_bound_configuration, server_bound_known_packs}, handshake_handler::{handshake, ping_request}, login_handler::{login_acknowledgement, login_start}, play_handler::{confirm_teletransportation, keep_alive, pick_item, ping_request_play, set_item_held, set_player_position, set_player_position_and_rotation, swing_arm}}, player_connection::ClientState, PlayerConnection, ServerConfig};
@@ -90,9 +91,11 @@ impl ProtocolThread{
                 Ok(_) => {
                     while buffer.len() > 0 {
                         println!("===============================================");
+                        let timer = Instant::now();
                         let mut client_guard = client.lock().await;
                         match Self::process_packet(&mut buffer, &mut socket, &mut client_guard, clients.clone()).await {
                             Ok(_) => {
+                                println!("Packet processed in {} us", timer.elapsed().as_micros());
                                 println!("Buffer after processing: {:?}", buffer);
                                 continue;
                             },
@@ -118,10 +121,10 @@ impl ProtocolThread{
         client: &mut PlayerConnection,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>
     ) -> Result<(), String> {
-        println!("Processing packet...");
-        println!("Buffer: {:?}", buffer);
+        /*println!("Processing packet...");
+        println!("Buffer: {:?}", buffer);*/
         let client_state = client.client_state.clone();
-        println!("Client state: {:?}", client_state);
+        //println!("Client state: {:?}", client_state);
         if buffer.is_empty() {
             println!("Empty buffer");
             return Ok(());
@@ -150,8 +153,9 @@ impl ProtocolThread{
         
         };
 
-        println!("Packet ID: {}", packet_id);
-        println!("Packet ID: 0x{:X}", packet_id);
+        
+        /*println!("Packet ID: {}", packet_id);
+        println!("Packet ID: 0x{:X}", packet_id);*/
         let result: Result<(), String> = match client_state {
             ClientState::HANDSHAKE => Self::handshake_handler(packet_id,length,buffer,socket,  client,clients).await,
             ClientState::LOGIN => Self::login_handler(packet_id,length,buffer,socket,  client,clients).await,
@@ -159,7 +163,6 @@ impl ProtocolThread{
             ClientState::PLAY => Self::play_handler(packet_id,length,buffer,socket,  client,clients).await,
         };
         if result.is_err() {
-            //checkear si el error es not_enough_data
             let error = result.unwrap_err();
             if error == "not_enough_data" {
                 let mut temp_buffer = BytesMut::with_capacity(1024);
@@ -167,9 +170,7 @@ impl ProtocolThread{
                 write_varint(&mut temp_buffer, packet_id);
                 let buffer_clone = buffer.clone();
                 buffer.clear();
-                //add the length and packet id back to the buffer
                 buffer.extend_from_slice(&temp_buffer);
-                //add the rest of the data back to the buffer
                 buffer.extend_from_slice(&buffer_clone);
                 let mut readed_buffer= BytesMut::with_capacity(1024);
                 socket.read_buf(&mut readed_buffer).await.unwrap();
@@ -189,12 +190,6 @@ impl ProtocolThread{
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>
         ) -> Result<(), String> {
             let _ = clients;
-
-            if packet_id > 100 {
-                println!("Unknown packet ID: {} in play handler", packet_id);
-                buffer.clear();
-                return Ok(());
-            }
             let result_on_read = match packet_id{
                 0x00 =>  confirm_teletransportation::handle(length,buffer,socket,client).await,
                 0x21 =>  ping_request_play::handle(length,buffer,socket,client).await,
@@ -203,54 +198,12 @@ impl ProtocolThread{
                 0x2F =>  set_item_held::handle(length,buffer,socket,client).await,
                 0x36 =>  swing_arm::handle(length,buffer,socket,client).await,
                 0x18 =>  keep_alive::handle(length,buffer,socket,client).await,
-                0x20 => pick_item::handle(length,buffer,socket,client).await,
-                0x49 => {
-                    println!("Idk what to do with this packet");
-                    buffer.clear();
-                    socket.flush().await.unwrap();
-                    Ok(())
-                }
-                0x3D => {
-                    println!("Idk what to do with this packet");
-                    buffer.clear();
-                    socket.flush().await.unwrap();
-                    Ok(())
-                }
-                0x57=>{
-                    println!("Idk what to do with this packet");
-                    buffer.clear();
-                    socket.flush().await.unwrap();
-                    Ok(())
-                }
-                0x53 =>{
-                    println!("Idk what to do with this packet");
-                    buffer.clear();
-                    socket.flush().await.unwrap();
-                    Ok(())
-                }
-                0x54 =>{
-                    println!("Idk what to do with this packet");
-                    buffer.clear();
-                    socket.flush().await.unwrap();
-                    Ok(())
-                }
-                0x40 => {
-                    println!("Idk what to do with this packet");
-                    buffer.clear();
-                    socket.flush().await.unwrap();
-                    Ok(())
-                }
-                0x10 =>{
-                    println!("Idk what to do with this packet");
-                    buffer.clear();
-                    socket.flush().await.unwrap();
-                    Ok(())
-                }
+                0x20 =>  pick_item::handle(length,buffer,socket,client).await,
                 _ => {
                     println!("Unknown packet ID: {} in play handler", packet_id);
                     buffer.clear();
                     socket.flush().await.unwrap();
-                    Ok(())
+                    return Err("Unknown packet ID".to_string());
                 }
             };
 

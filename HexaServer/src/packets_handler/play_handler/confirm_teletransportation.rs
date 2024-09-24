@@ -1,4 +1,5 @@
 use bytes::{Buf, BytesMut};
+use hexa_protocol::packets::client::play::confirm_teleport_packet::ConfirmTeleportPacket;
 use hexa_protocol_base::PacketReader;
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 
@@ -8,14 +9,8 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     let _ = client;
     let _ = length;
     if buffer.remaining() < length as usize {
-        println!("Not enough data to read confirm teletransportation");
-        println!("Buffer remaining: {}, Length: {}", buffer.remaining(), length);
-        //buffer.clear();
         return Err("not_enough_data".to_string());
     }
-    let mut reader = PacketReader::new(buffer);
-    let id = reader.read_varint();
-    println!("Tp confirm {:?}",id);
-    socket.flush().await.unwrap();
+    ConfirmTeleportPacket::read_packet(buffer, client.get_protocol_version());
     Ok(())
 }

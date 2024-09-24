@@ -4,8 +4,8 @@ use serde_json::json;
 use hexa_protocol_base::{packet_builder, Packet, PacketBuilder, PacketType};
 
 pub struct StatusResponsePacket{
-    pub server_name: String,
     pub player_protocol: i32,
+    pub server_name: String,
     pub server_protocols: Vec<i32>,
     pub motd: serde_json::Value ,
     pub server_icon: String,
@@ -15,8 +15,11 @@ pub struct StatusResponsePacket{
 
 }
 impl Packet for StatusResponsePacket {
-    fn get_packet_id(&self) -> i32 {
-        0x00 // 0 
+    fn get_packet_id(&self, protocol_version:i32) -> i32 {
+        match protocol_version {
+            767 => 0x00,
+            _ => 0x00
+        }
     }
     fn get_packet_type(&self) -> PacketType{
         PacketType::SERVER
@@ -27,8 +30,8 @@ impl Packet for StatusResponsePacket {
 impl StatusResponsePacket{
 
     pub fn new(
-        server_name:String,
         player_protocol:i32,
+        server_name:String,
         server_protocols:Vec<i32>,
         motd:serde_json::Value,
         server_icon:String,
@@ -49,7 +52,7 @@ impl StatusResponsePacket{
     }
 
     pub fn build(&self) -> PacketBuilder{
-        let mut new_server_name = self.server_name.clone();
+             let mut new_server_name = self.server_name.clone();
         let protocol = if self.server_protocols.contains(&self.player_protocol) {
             self.player_protocol
         } else {
@@ -84,7 +87,7 @@ impl StatusResponsePacket{
         });
 
         let response_str = serde_json::to_string(&response).unwrap();
-        let mut packet = packet_builder::PacketBuilder::new(self.get_packet_id());
+        let mut packet = packet_builder::PacketBuilder::new(0);
         packet.write_string(response_str.as_str());
         packet
         }

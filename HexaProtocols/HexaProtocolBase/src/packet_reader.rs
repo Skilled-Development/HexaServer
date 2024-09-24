@@ -36,7 +36,7 @@ impl<'a> PacketReader<'a> {
         match byte {
             0x00 => false, // 0x00 representa `false`
             0x01 => true,  // 0x01 representa `true`
-            _ => panic!("Invalid boolean value in packet: {}", byte), // Cualquier otro valor no es válido
+            _ => false // Cualquier otro valor no es válido
         }
     }
     

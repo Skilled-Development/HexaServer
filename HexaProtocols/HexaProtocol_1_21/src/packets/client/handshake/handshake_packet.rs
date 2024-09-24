@@ -13,7 +13,7 @@ pub struct HandshakePacket {
 }
 
 impl Packet for HandshakePacket {
-    fn get_packet_id(&self) -> i32 {
+    fn get_packet_id(&self,protocol_version:i32) -> i32 {
         0x00 // 0 
     }
     fn get_packet_type(&self) -> PacketType{

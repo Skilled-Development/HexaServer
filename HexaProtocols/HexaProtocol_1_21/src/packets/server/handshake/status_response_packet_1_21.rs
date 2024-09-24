@@ -1,30 +1,20 @@
 
 use serde_json::json;
 
-use crate::{packet_builder, Packet, PacketBuilder, PacketType};
+use hexa_protocol_base::{packet_builder, Packet, PacketBuilder, PacketType};
 
-pub struct StatusResponsePacket{
-    pub server_name: String,
-    pub player_protocol: i32,
-    pub server_protocols: Vec<i32>,
-    pub motd: serde_json::Value ,
-    pub server_icon: String,
-    pub current_player_count: i32,
-    pub max_player_count: i32,
-    pub sample_text: Option<Vec<String>>
-
+pub struct StatusResponsePacket_1_21{
+        pub server_name:String,
+        pub player_protocol:i32,
+        pub server_protocols:Vec<i32>,
+        pub motd:serde_json::Value,
+        pub server_icon:String,
+        pub current_player_count:i32,
+        pub max_player_count:i32,
+        pub sample_text:Option<Vec<String>>
 }
-impl Packet for StatusResponsePacket {
-    fn get_packet_id(&self) -> i32 {
-        0x00 // 0 
-    }
-    fn get_packet_type(&self) -> PacketType{
-        PacketType::SERVER
-    }
-    
 
-}
-impl StatusResponsePacket{
+impl StatusResponsePacket_1_21{
 
     pub fn new(
         server_name:String,
@@ -35,8 +25,8 @@ impl StatusResponsePacket{
         current_player_count:i32,
         max_player_count:i32,
         sample_text:Option<Vec<String>>
-    ) -> StatusResponsePacket{
-        StatusResponsePacket{
+    ) -> StatusResponsePacket_1_21{
+        StatusResponsePacket_1_21{
             server_name,
             player_protocol,
             server_protocols,
@@ -84,7 +74,7 @@ impl StatusResponsePacket{
         });
 
         let response_str = serde_json::to_string(&response).unwrap();
-        let mut packet = packet_builder::PacketBuilder::new(self.get_packet_id());
+        let mut packet = packet_builder::PacketBuilder::new(0);
         packet.write_string(response_str.as_str());
         packet
         }

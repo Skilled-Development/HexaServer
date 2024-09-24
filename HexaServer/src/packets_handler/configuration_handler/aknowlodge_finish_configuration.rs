@@ -8,7 +8,6 @@ extern crate rand;
 extern crate byteorder;
 
 use crate::{player_connection::ClientState, PlayerConnection};
-// Asumiendo que tienes estas funciones
 
 pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {
     let _ = buffer;
@@ -139,29 +138,4 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     synchronize_position.write_varint(0);
     synchronize_position.send(socket).await?;
     Ok(())
-}
-
-pub fn read_varint(buffer: &mut BytesMut) -> Result<i32, String> {
-    if buffer.is_empty() {
-        return Err("Datos incompletos: Buffer vacío".to_string());
-    }
-
-    let mut result = 0;
-    let mut shift = 0;
-    loop {
-        if buffer.is_empty() {
-            return Err("Buffer vacío durante la lectura de VarInt".to_string());
-        }
-
-        let byte = buffer.get_u8();
-        result |= ((byte & 0x7F) as i32) << shift;
-        if byte & 0x80 == 0 {
-            break;
-        }
-        shift += 7;
-        if shift > 35 {
-            return Err("VarInt demasiado grande".to_string());
-        }
-    }
-    Ok(result)
 }

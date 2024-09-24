@@ -60,8 +60,8 @@ pub async fn handle(
         let motd_json = motd.to_json();
 
         let _status_response_packet = status_response_packet::StatusResponsePacket::new(
-            server_name,
             client.get_protocol_version(),
+            server_name,
             server_versions,
             motd_json,
             server_icon_base64,

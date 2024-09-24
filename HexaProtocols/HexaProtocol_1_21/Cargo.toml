@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 crab_nbt = "0.2.2"
 hexa_protocol_base = { path = "../HexaProtocolBase" }
+
 uuid = "1.5"
 bytes = "1"
 tokio = { version = "1", features = ["full"] }
