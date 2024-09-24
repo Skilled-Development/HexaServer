@@ -23,7 +23,10 @@ pub mod packets {
         pub mod configuration{
             pub mod play_login_packet;
         }
+        pub mod play{
+            pub mod update_section_blocks_packet;
     }
+}
 }
 pub use packets::client::handshake::handshake_packet::HandshakePacket;
 pub use packets::server::handshake::status_response_packet::StatusResponsePacket;

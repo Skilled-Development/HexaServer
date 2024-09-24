@@ -122,6 +122,14 @@ impl PacketBuilder {
         self.buffer.put_u8(value as u8);                    
         self
     }
+    pub fn write_varlong(&mut self, mut value: i64) -> &mut Self {
+        while (value & 0xFFFFFFFFFFFFFF80u64 as i64) != 0 {
+            self.buffer.put_u8((value as u8 & 0x7F) | 0x80);
+            value >>= 7;
+        }
+        self.buffer.put_u8(value as u8);
+        self
+    }
     pub fn write_long_be(&mut self, value: i64) -> &mut Self {
         self.buffer.put_i64(value.to_be()); 
         self

@@ -25,6 +25,9 @@ pub mod packets {
                 pub mod data_registry_packet_1_21;
             }
         }
+        pub mod play{
+            pub mod update_section_blocks_packet_1_21;
+        }
     }
 }
 

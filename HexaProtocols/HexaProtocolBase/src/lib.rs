@@ -10,6 +10,9 @@ pub mod packets{
 pub mod player{
     pub mod hand;
 }
+pub mod chunk{
+    pub mod chunk_encoder_decoder;
+}
 pub use packets::packet_type::PacketType;
 pub use packets::packet::Packet;
 pub use text_component::TextComponent;

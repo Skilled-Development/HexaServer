@@ -40,7 +40,27 @@ impl<'a> PacketReader<'a> {
         }
     }
     
+    pub fn read_varlong(&mut self) -> i64 {
+        let mut value = 0;
+        let mut position = 0;
 
+        loop {
+            self.ensure_remaining(1); // Asegúrate de que haya al menos un byte para leer
+            let current_byte = self.read_unsigned_byte();
+            value |= ((current_byte & 0x7F) as i64) << position;
+
+            if (current_byte & 0x80) == 0 {
+                break;
+            }
+
+            position += 7;
+            if position >= 64 {
+                panic!("VarLong is too big");
+            }
+        }
+
+        value
+    }
     // Leer un Unsigned Short (16 bits sin signo)
     pub fn read_unsigned_short(&mut self) -> u16 {
         self.ensure_remaining(2);
