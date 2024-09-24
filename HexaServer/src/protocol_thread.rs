@@ -2,7 +2,7 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use bytes::{ Buf, BufMut, BytesMut};
 use hexa_protocol_base::PacketBuilder;
-use rand::Error;
+use rand::{Error, Rng};
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Mutex};
 
 use crate::{packets_handler::{configuration_handler::{aknowlodge_finish_configuration, client_information, cookie_request, server_bound_configuration, server_bound_known_packs}, handshake_handler::{handshake, ping_request}, login_handler::{login_acknowledgement, login_start}, play_handler::{confirm_teletransportation, keep_alive, pick_item, ping_request_play, set_item_held, set_player_position, set_player_position_and_rotation, swing_arm}}, player_connection::ClientState, PlayerConnection, ServerConfig};
@@ -191,8 +191,8 @@ impl ProtocolThread{
         ) -> Result<(), String> {
             let _ = clients;
             let result_on_read = match packet_id{
-                0x00 =>  confirm_teletransportation::handle(length,buffer,socket,client).await,
-                0x21 =>  ping_request_play::handle(length,buffer,socket,client).await,
+                0x00 =>  confirm_teletransportation::handle(length,buffer,client).await,
+                0x21 =>  ping_request_play::handle(length,buffer,client).await,
                 0x1A =>  set_player_position::handle(length,buffer,socket,client).await,
                 0x1B =>  set_player_position_and_rotation::handle(length,buffer,socket,client).await,
                 0x2F =>  set_item_held::handle(length,buffer,socket,client).await,
@@ -212,7 +212,7 @@ impl ProtocolThread{
                 if client_last_keep_alive.elapsed().as_millis() > 17000 {
                     println!("Client {} timed out", client.ip_address);
                     let mut keep_alive_packet = PacketBuilder::new(0x26);
-                    let random_id: i64 = 346092730i64;//rand::thread_rng().gen();
+                    let random_id: i64 = /*346092730i64;*/rand::thread_rng().gen();
                     keep_alive_packet.write_long_be(random_id);
                     keep_alive_packet.send(socket).await?;
                     client.set_keep_alive_id(random_id);

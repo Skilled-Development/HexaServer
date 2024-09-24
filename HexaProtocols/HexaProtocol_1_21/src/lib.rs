@@ -10,6 +10,8 @@ pub mod packets {
             pub mod confirm_teleport_packet_1_21;
             pub mod set_player_position_packet_1_21;
             pub mod set_player_position_and_rotation_packet_1_21;
+            pub mod ping_request_play_packet_1_21;
+            pub mod set_item_held_packet_1_21;
         }
     }
     pub mod server{

@@ -1,23 +1,14 @@
 
 
 use bytes::{Buf, BytesMut};
-use hexa_protocol_base::PacketReader;
-use tokio::net::TcpStream;
+use hexa_protocol::packets::client::play::ping_request_play_packet::PingRequestPlayPacket;
 
 use crate::PlayerConnection;
 
-pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {
-    let _ = socket;
-    let _ = client;
-    let _ = length;
+pub async fn handle(length: i32, buffer: &mut BytesMut,client: &mut PlayerConnection) -> Result<(), String> {
     if buffer.remaining() < length as usize {
-        println!("Not enough data to read ping request");
-        println!("Buffer remaining: {}, Length: {}", buffer.remaining(), length);
-        //buffer.clear();
         return Err("not_enough_data".to_string());
     }
-    let mut reader = PacketReader::new(buffer);
-    let payload = reader.read_long_be();
-    println!("Ping request {:?}", payload);
+    let _packet = PingRequestPlayPacket::read_packet(buffer,client.get_protocol_version());
     Ok(())
 }

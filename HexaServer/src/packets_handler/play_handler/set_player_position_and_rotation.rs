@@ -1,6 +1,5 @@
 use bytes::{Buf, BytesMut};
 use hexa_protocol::packets::client::play::set_player_position_and_rotation_packet::SetPlayerPositionAndRotationPacket;
-use hexa_protocol_base::PacketReader;
 use tokio::net::TcpStream;
 
 use crate::PlayerConnection;
