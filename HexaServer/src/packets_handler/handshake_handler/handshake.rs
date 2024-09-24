@@ -6,7 +6,7 @@ use hexa_protocol::{packets::server::handshake::status_response_packet, Handshak
 use hexa_protocol_base::TextComponent;
 use tokio::{ net::TcpStream, sync::Mutex};
 
-use crate::{player_connection::ClientState, PlayerConnection};
+use crate::{player::player_connection::ClientState, PlayerConnection};
 
 
 pub async fn handle(

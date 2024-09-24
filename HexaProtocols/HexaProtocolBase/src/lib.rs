@@ -7,6 +7,9 @@ pub mod packets{
     pub mod packet_type;
     pub mod packet;
 }
+pub mod player{
+    pub mod hand;
+}
 pub use packets::packet_type::PacketType;
 pub use packets::packet::Packet;
 pub use text_component::TextComponent;

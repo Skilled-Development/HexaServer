@@ -1,7 +1,7 @@
 use bytes::BytesMut;
 
 use hexa_protocol_1_21::packets::client::play::set_item_held_packet_1_21::SetItemHeldPacket1_21;
-use hexa_protocol_base::{ Packet, PacketBuilder, PacketReader, PacketType};
+use hexa_protocol_base::{ Packet, PacketType};
 
 pub struct SetItemHeldPacket{
     pub slot: i16,

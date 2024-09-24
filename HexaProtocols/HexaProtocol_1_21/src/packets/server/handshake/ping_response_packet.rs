@@ -8,7 +8,10 @@ pub struct PingResponsePacket{
 
 impl Packet for PingResponsePacket {
     fn get_packet_id(&self,protocol_version:i32) -> i32 {
-        0x01 // 1
+        match protocol_version {
+            767 => 0x01,
+            _ => 0x01
+        }
     }
     fn get_packet_type(&self) -> PacketType{
         PacketType::SERVER

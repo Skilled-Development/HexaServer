@@ -2,10 +2,10 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use bytes::{ Buf, BufMut, BytesMut};
 use hexa_protocol_base::PacketBuilder;
-use rand::{Error, Rng};
+use rand::Rng;
 use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::{TcpListener, TcpStream}, sync::Mutex};
 
-use crate::{packets_handler::{configuration_handler::{aknowlodge_finish_configuration, client_information, cookie_request, server_bound_configuration, server_bound_known_packs}, handshake_handler::{handshake, ping_request}, login_handler::{login_acknowledgement, login_start}, play_handler::{confirm_teletransportation, keep_alive, pick_item, ping_request_play, set_item_held, set_player_position, set_player_position_and_rotation, swing_arm}}, player_connection::ClientState, PlayerConnection, ServerConfig};
+use crate::{packets_handler::{configuration_handler::{aknowlodge_finish_configuration, client_information, cookie_request, server_bound_configuration, server_bound_known_packs}, handshake_handler::{handshake, ping_request}, login_handler::{login_acknowledgement, login_start}, play_handler::{confirm_teletransportation, keep_alive, pick_item, ping_request_play, set_item_held, set_player_position, set_player_position_and_rotation, swing_arm}}, player::player_connection::ClientState, PlayerConnection, ServerConfig};
 
 
 pub struct ProtocolThread{
@@ -212,7 +212,7 @@ impl ProtocolThread{
                 if client_last_keep_alive.elapsed().as_millis() > 17000 {
                     println!("Client {} timed out", client.ip_address);
                     let mut keep_alive_packet = PacketBuilder::new(0x26);
-                    let random_id: i64 = /*346092730i64;*/rand::thread_rng().gen();
+                    let random_id: i64 = rand::thread_rng().gen();
                     keep_alive_packet.write_long_be(random_id);
                     keep_alive_packet.send(socket).await?;
                     client.set_keep_alive_id(random_id);
@@ -241,7 +241,6 @@ impl ProtocolThread{
             0x02 => return server_bound_configuration::handle(length,buffer,socket,client).await,
             0x03 => return aknowlodge_finish_configuration::handle(length,buffer,socket,client).await,
             0x07 => return server_bound_known_packs::handle(length,buffer,socket,client).await,
-    
             _ => println!("Unknown packet ID: {} in configuration handler", packet_id),
         }
         Ok(())

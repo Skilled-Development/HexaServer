@@ -14,7 +14,10 @@ pub struct HandshakePacket {
 
 impl Packet for HandshakePacket {
     fn get_packet_id(&self,protocol_version:i32) -> i32 {
-        0x00 // 0 
+        match protocol_version {
+            767=> 0x00,
+            _=> 0x00
+        }
     }
     fn get_packet_type(&self) -> PacketType{
         PacketType::CLIENT

@@ -12,6 +12,7 @@ pub mod packets {
             pub mod set_player_position_and_rotation_packet;
             pub mod ping_request_play_packet;
             pub mod set_item_held_packet;
+            pub mod swing_arm_packet;
         }
     }
     pub mod server{

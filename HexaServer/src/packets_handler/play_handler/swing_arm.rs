@@ -1,5 +1,5 @@
 use bytes::{Buf, BytesMut};
-use hexa_protocol_base::PacketReader;
+use hexa_protocol::packets::client::play::swing_arm_packet::SwingArmPacket;
 use tokio::net::TcpStream;
 
 use crate::PlayerConnection;
@@ -9,13 +9,10 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     let _ = client;
     let _ = length;
     if buffer.remaining() < length as usize {
-        println!("Not enough data to read set item held packet");
-        println!("Buffer remaining: {}, Length: {}", buffer.remaining(), length);
-        //buffer.clear();
         return Err("not_enough_data".to_string());
     }
-    let mut reader = PacketReader::new(buffer);
-    let hand = reader.read_varint();
-    println!("hand: {}", hand);
+    let packet = SwingArmPacket::read_packet(buffer, client.get_protocol_version());
+    let hand = packet.get_hand();
+    println!("Swing arm packet received with hand: {:?}", hand);
     Ok(())
 }

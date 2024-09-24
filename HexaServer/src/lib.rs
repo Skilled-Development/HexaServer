@@ -1,7 +1,6 @@
 // src/lib.rs
 
 pub mod hexa_server;
-pub mod player_connection;
 pub mod protocol_thread;
 pub mod packets_handler{
     pub mod play_handler{
@@ -30,11 +29,15 @@ pub mod packets_handler{
         pub mod aknowlodge_finish_configuration;
     }
 }
+pub mod player{
+    pub mod player;
+    pub mod player_connection;
+}
 pub mod server_config;
 pub mod monitor;
 
 pub use monitor::Monitor;
 pub use server_config::ServerConfig;
-pub use player_connection::PlayerConnection;
+pub use player::player_connection::PlayerConnection;
 pub use protocol_thread::ProtocolThread;
 pub use hexa_server::HexaServer; 

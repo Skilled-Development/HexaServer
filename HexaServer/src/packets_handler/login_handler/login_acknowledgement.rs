@@ -5,7 +5,7 @@ extern crate rsa;
 extern crate rand;
 extern crate byteorder;
 
-use crate::{player_connection::ClientState, PlayerConnection};
+use crate::{player::player_connection::ClientState, PlayerConnection};
 // Asumiendo que tienes estas funciones
 
 pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {

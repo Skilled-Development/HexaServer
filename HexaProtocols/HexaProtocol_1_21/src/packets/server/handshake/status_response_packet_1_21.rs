@@ -1,9 +1,9 @@
 
 use serde_json::json;
 
-use hexa_protocol_base::{packet_builder, Packet, PacketBuilder, PacketType};
+use hexa_protocol_base::{packet_builder, PacketBuilder};
 
-pub struct StatusResponsePacket_1_21{
+pub struct StatusResponsePacket1_21{
         pub server_name:String,
         pub player_protocol:i32,
         pub server_protocols:Vec<i32>,
@@ -14,7 +14,7 @@ pub struct StatusResponsePacket_1_21{
         pub sample_text:Option<Vec<String>>
 }
 
-impl StatusResponsePacket_1_21{
+impl StatusResponsePacket1_21{
 
     pub fn new(
         server_name:String,
@@ -25,8 +25,8 @@ impl StatusResponsePacket_1_21{
         current_player_count:i32,
         max_player_count:i32,
         sample_text:Option<Vec<String>>
-    ) -> StatusResponsePacket_1_21{
-        StatusResponsePacket_1_21{
+    ) -> StatusResponsePacket1_21{
+        StatusResponsePacket1_21{
             server_name,
             player_protocol,
             server_protocols,
