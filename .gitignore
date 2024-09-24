@@ -4,3 +4,13 @@
 /HexaProtocols/HexaProtocol/target/
 /HexaProtocols/HexaProtocol_1_21/target/
 /.vscode/
+/HexaTest/Cargo.lock
+/HexaStresser/Cargo.lock
+/HexaServer/Cargo.lock
+/HexaProtocols/HexaProtocol/Cargo.lock
+/HexaProtocols/HexaProtocol_1_21/Cargo.lock
+/HexaProtocols/HexaProtocolBase/Cargo.lock
+/HexaTest/target/
+/HexaStresser/target/
+/HexaServer/target/
+/HexaProtocols/HexaProtocol/target/
