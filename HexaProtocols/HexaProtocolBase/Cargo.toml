@@ -14,6 +14,7 @@ serde = { version = "1.0", features = ["derive"] }
 crab_nbt = "0.2.2"
 reqwest = { version = "0.12.7", features = ["blocking"] }
 base64 = "0.22.1"
+bit-set = "0.5"
 
 [lib]
 path = "src/lib.rs"

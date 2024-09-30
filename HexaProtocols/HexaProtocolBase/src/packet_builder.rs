@@ -1,6 +1,7 @@
 use bytes::{BufMut, BytesMut};
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
+use bit_set::BitSet;
 pub enum PacketElement<'a> {
     Int(i32),
     Short(i16),
@@ -28,7 +29,30 @@ impl PacketBuilder {
         builder
     }
 
+    pub fn write_long_array(&mut self, array: &[i64]) -> &mut Self {
+        for value in array {
+            self.write_long_be(*value);
+        }
+        self
+    }    
 
+    pub fn write_bitset(&mut self, bitset: &BitSet) -> &mut Self {
+        let long_array: Vec<i64> = bitset.iter().map(|bit| (bit / 64) as i64).collect();
+        self.write_varint(long_array.len() as i32);
+        self.write_long_array(&long_array);
+        self
+    }
+
+    pub fn write_position(&mut self, x: i32, y: i32, z: i32) -> &mut Self {
+        let encoded_position: u64 = ((x as u64 & 0x3FFFFFF) << 38) | ((z as u64 & 0x3FFFFFF) << 12) | (y as u64 & 0xFFF);
+        self.buffer.put_u64(encoded_position);
+        self
+    }
+    pub fn write_nbt(&mut self, nbt: crab_nbt::Nbt) -> &mut Self {
+        let nbt_bytes = nbt.write_unnamed();
+        self.buffer.extend_from_slice(&nbt_bytes);
+        self
+    }
     pub fn write_string(&mut self, value: &str) -> &mut Self {
         let value_bytes = value.as_bytes();
         let length = value.len() as i32;
@@ -36,6 +60,7 @@ impl PacketBuilder {
         self.buffer.extend_from_slice(value_bytes); 
         self
     }
+
     pub fn write_angle(&mut self, angle: f32) -> &mut Self {
         let encoded_angle = ((angle / 360.0) * 256.0).round() as u8;
         self.buffer.put_u8(encoded_angle);
@@ -68,8 +93,16 @@ impl PacketBuilder {
         self.buffer.extend_from_slice(value); 
         self
     }
+    pub fn write_byte_array_no_length_prefixed(&mut self, value: &[u8]) -> &mut Self {
+        self.buffer.extend_from_slice(value);
+        self
+    }
     pub fn write_int(&mut self, value: i32) -> &mut Self {
         self.buffer.put_i32(value);
+        self
+    }
+    pub fn write_bytes(&mut self, value: [u8; 2]) -> &mut Self {
+        self.buffer.extend_from_slice(&value);
         self
     }
     pub fn write_element(&mut self, element: PacketElement) -> &mut Self {

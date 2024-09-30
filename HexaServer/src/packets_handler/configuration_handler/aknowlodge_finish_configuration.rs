@@ -130,7 +130,7 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     game_event_packet.send(socket).await?;
     let mut synchronize_position = PacketBuilder::new(0x40);
     synchronize_position.write_double(0.0);
-    synchronize_position.write_double(10000.0);
+    synchronize_position.write_double(1000.0);
     synchronize_position.write_double(0.0);
     synchronize_position.write_float(0.0);
     synchronize_position.write_float(0.0);

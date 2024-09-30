@@ -39,7 +39,21 @@ impl<'a> PacketReader<'a> {
             _ => false // Cualquier otro valor no es válido
         }
     }
-    
+    pub fn read_position(&mut self) -> (i32, i32, i32) {
+        self.ensure_remaining(8); // Asegura que haya al menos 8 bytes en el buffer
+        let val = self.buf.get_u64();
+
+        let x = ((val >> 38) & 0x3FFFFFF) as i32;
+        let y = ((val >> 26) & 0xFFF) as i32;
+        let z = (val & 0x3FFFFFF) as i32;
+
+        // Ajustar los valores para el rango correcto
+        let x = if x >= 0x2000000 { x - 0x4000000 } else { x };
+        let y = if y >= 0x800 { y - 0x1000 } else { y };
+        let z = if z >= 0x2000000 { z - 0x4000000 } else { z };
+
+        (x, y, z)
+    }
     pub fn read_varlong(&mut self) -> i64 {
         let mut value = 0;
         let mut position = 0;

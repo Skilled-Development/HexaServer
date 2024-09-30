@@ -1,7 +1,7 @@
 use bytes::BytesMut;
 
 use hexa_protocol_1_21::packets::server::play::update_section_blocks_packet_1_21::UpdateSectionBlocksPacket1_21;
-use hexa_protocol_base::{ Packet, PacketType};
+use hexa_protocol_base::{ Packet, PacketBuilder, PacketType};
 
 pub struct UpdateSectionBlocksPacket{
     pub chunk_section_x: u32,
@@ -62,6 +62,27 @@ impl UpdateSectionBlocksPacket{
             _ => UpdateSectionBlocksPacket::new(0,0,0,0,Vec::new(),0)
             
         }
+    }
+
+    pub fn build(&self) -> PacketBuilder {
+        match self.protocol_version {
+            767 => {
+                let packet_1_21 = UpdateSectionBlocksPacket1_21::new(
+                    self.chunk_section_x,
+                    self.chunk_section_y,
+                    self.chunk_section_z,
+                    self.blocks_count,
+                    self.data.clone()
+                );
+                packet_1_21.build()
+            },
+            _ => PacketBuilder::new(0x49)
+        }
+    }
+
+    pub async fn send(&self,socket: &mut tokio::net::TcpStream) {
+        let mut packet = self.build();
+        let _ = packet.send(socket).await;
     }
 
     pub fn get_chunk_section_x(&self)-> u32{

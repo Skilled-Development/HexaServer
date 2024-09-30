@@ -1,9 +1,17 @@
 use std::sync::Arc;
 
+use hexa_protocol_base::PacketBuilder;
+use tokio::{
+    io::AsyncWriteExt,
+    net::{
+        tcp::{OwnedWriteHalf, WriteHalf},
+        TcpStream,
+    },
+};
+
 use crate::ServerConfig;
 
-
-#[derive(Eq, Hash, PartialEq, Debug,Clone, Copy)]  // Add Debug trait to ClientState
+#[derive(Eq, Hash, PartialEq, Debug, Clone, Copy)] // Add Debug trait to ClientState
 pub enum ClientState {
     HANDSHAKE,
     LOGIN,
@@ -11,9 +19,7 @@ pub enum ClientState {
     PLAY,
 }
 
-#[derive(Clone)]
-pub struct PlayerConnection {
-
+pub struct PlayerConnection /*<'a> */ {
     pub id: Option<String>,
     pub name: Option<String>,
     pub ip_address: String,
@@ -25,25 +31,38 @@ pub struct PlayerConnection {
     pub protocol_version: Option<i32>,
     pub last_keep_alive: Option<std::time::Instant>,
     pub keep_alive_id: Option<i64>,
-
+    pub sended_blocks: bool,
+    //pub socket_writer: Option<WriteHalf<'a>>,
 }
 
-impl PlayerConnection {
-    pub fn new(ip: String, port: u16) -> PlayerConnection {
-       println!("Creating new connection with IP {}", ip);
+impl PlayerConnection /*<'a> */ {
+    pub fn new(ip: String, port: u16) -> PlayerConnection /*<'a> */ {
+        println!("Creating new connection with IP {}", ip);
         PlayerConnection {
             id: None,
             name: None,
             ip_address: ip,
-             port,
+            port,
             client_state: ClientState::HANDSHAKE,
-            username:None,
-            uuid:None,
+            username: None,
+            uuid: None,
             server_config: None,
             protocol_version: None,
             last_keep_alive: None,
             keep_alive_id: None,
+            sended_blocks: false,
+            //socket_writer: None,
         }
+    }
+
+    /*pub fn set_socket_writer(&mut self, writer: WriteHalf<'_>) {
+        self.socket_writer = Some(writer);
+    }*/
+    pub fn is_send_blocks(&self) -> bool {
+        self.sended_blocks
+    }
+    pub fn set_send_blocks(&mut self, sended_blocks: bool) {
+        self.sended_blocks = sended_blocks;
     }
 
     pub fn set_protocol_version(&mut self, protocol_version: i32) {
@@ -77,13 +96,11 @@ impl PlayerConnection {
     pub fn get_username(&self) -> String {
         self.username.clone().unwrap()
     }
-    
-    pub fn set_server_config(&mut self, server_config: Arc<std::sync::RwLock<ServerConfig>>) {
 
+    pub fn set_server_config(&mut self, server_config: Arc<std::sync::RwLock<ServerConfig>>) {
         self.server_config = Some(server_config);
-    
     }
-    
+
     pub fn set_uuid(&mut self, uuid: uuid::Uuid) {
         self.uuid = Some(uuid);
     }
@@ -91,12 +108,12 @@ impl PlayerConnection {
     pub fn get_uuid(&self) -> uuid::Uuid {
         self.uuid.clone().unwrap()
     }
-    
 
     pub fn get_client_state(&self) -> ClientState {
         self.client_state
     }
 
-
-    
+    /*pub fn send_async_packet(&mut self, packet: PacketBuilder) {
+        tokio::spawn(async move { self.socket_writer.unwrap().write_all(&packet.build()) });
+    }*/
 }
