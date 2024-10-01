@@ -6,7 +6,7 @@ use rand::Rng;
 use tokio::{
     io::AsyncReadExt,
     net::{tcp::OwnedReadHalf, TcpListener},
-    sync::Mutex,
+    sync::{Mutex, RwLock},
 };
 
 use crate::{
@@ -32,7 +32,7 @@ pub struct ProtocolThread {
     pub clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
     pub server_name: String,
     pub server_versions: Vec<i32>,
-    pub server_config: Arc<std::sync::RwLock<ServerConfig>>,
+    pub server_config: Arc<RwLock<ServerConfig>>,
 }
 
 impl ProtocolThread {
@@ -41,7 +41,7 @@ impl ProtocolThread {
         address: String,
         server_name: String,
         server_versions: Vec<i32>,
-        server_config: Arc<std::sync::RwLock<ServerConfig>>,
+        server_config: Arc<RwLock<ServerConfig>>,
     ) -> Self {
         let protocol_thread = ProtocolThread {
             port,

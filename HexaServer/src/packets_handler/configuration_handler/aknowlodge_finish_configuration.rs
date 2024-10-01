@@ -30,7 +30,7 @@ pub async fn handle(
           .unwrap()
           .get_entity_processor()
           .lock()
-          .next_entity_id(client)*/
+          .next_entity_id(client),*/
     );
     //HARDCORE
     login_packet.write_boolean(false);

@@ -1,9 +1,7 @@
 use base64::{engine::general_purpose, Engine as _};
 use hexa_protocol_base::ServerVersion;
-use reqwest::blocking::get;
-use std::error::Error;
-use std::sync::{Arc, Mutex};
-use std::thread;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 pub struct ServerConfig {
     pub server_port: u16,
@@ -50,33 +48,37 @@ impl ServerConfig {
     pub fn update_server_icon_base64(&self) {
         let server_icon_url = self.server_icon_url.clone();
 
-        // Usar Arc y Mutex para manejar el estado compartido
+        // Clonar el Arc del Mutex de Tokio
         let server_icon_base64 = Arc::clone(&self.server_icon_base64);
 
-        thread::spawn(move || match server_icon_url.as_deref() {
-            Some(url) => match Self::download_image_as_base64(url) {
-                Ok(base64_string) => {
-                    let mut icon_base64 = server_icon_base64.lock().unwrap();
-                    *icon_base64 = Some(base64_string);
+        tokio::spawn(async move {
+            match server_icon_url.as_deref() {
+                Some(url) => match Self::download_image_as_base64(url).await {
+                    Ok(base64_string) => {
+                        let mut icon_base64 = server_icon_base64.lock().await;
+                        *icon_base64 = Some(base64_string);
+                    }
+                    Err(e) => {
+                        println!("Failed to download server icon: {}", e);
+                    }
+                },
+                None => {
+                    println!("Server icon URL is not set.");
                 }
-                Err(e) => {
-                    println!("Failed to download server icon: {}", e);
-                }
-            },
-            None => {
-                println!("Server icon URL is not set.");
             }
         });
     }
 
-    fn download_image_as_base64(url: &str) -> Result<String, Box<dyn Error>> {
-        let response = get(url)?;
+    async fn download_image_as_base64(
+        url: &str,
+    ) -> Result<String, Box<dyn std::error::Error + Send + Sync>> {
+        let response = reqwest::get(url).await?;
 
         if !response.status().is_success() {
             return Err(format!("Failed to download image: HTTP {}", response.status()).into());
         }
 
-        let image_bytes = response.bytes()?;
+        let image_bytes = response.bytes().await?;
         let base64_string = general_purpose::STANDARD.encode(&image_bytes);
 
         Ok(base64_string)

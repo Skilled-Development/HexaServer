@@ -40,7 +40,7 @@ pub async fn handle(
             println!("Getting server config");
             if let Some(server_config) = &client.server_config {
                 println!("Server config present");
-                let server_config_read_guard = server_config.read().unwrap();
+                let server_config_read_guard = server_config.read().await;
                 println!("Server config read guard");
                 let server_name = server_config_read_guard.get_server_name();
                 println!("Server name: {}", server_name);
@@ -51,7 +51,7 @@ pub async fn handle(
                 let server_icon_base64 = server_config_read_guard
                     .server_icon_base64
                     .lock()
-                    .unwrap()
+                    .await
                     .clone()
                     .unwrap_or_else(|| "".to_string());
                 let player_count = server_config_read_guard.player_count;

@@ -10,7 +10,7 @@ async fn main() {
     let mut server = HexaServer::new("HexaServer".to_string());
 
     // Add the version to the server
-    server.add_version(Arc::new(protocol_1_21));
+    server.add_version(Arc::new(protocol_1_21)).await;
     // Start the server
     server.start().await;
 }

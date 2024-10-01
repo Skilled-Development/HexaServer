@@ -2,7 +2,11 @@ use std::sync::Arc;
 
 use bytes::BytesMut;
 use hexa_protocol_base::PacketBuilder;
-use tokio::{io::AsyncWriteExt, net::tcp::OwnedWriteHalf, sync::Mutex};
+use tokio::{
+    io::AsyncWriteExt,
+    net::tcp::OwnedWriteHalf,
+    sync::{Mutex, RwLock},
+};
 
 use crate::ServerConfig;
 
@@ -22,7 +26,7 @@ pub struct PlayerConnection {
     pub client_state: ClientState,
     pub username: Option<String>,
     pub uuid: Option<uuid::Uuid>,
-    pub server_config: Option<Arc<std::sync::RwLock<ServerConfig>>>,
+    pub server_config: Option<Arc<RwLock<ServerConfig>>>,
     pub protocol_version: Option<i32>,
     pub last_keep_alive: Option<std::time::Instant>,
     pub keep_alive_id: Option<i64>,
@@ -93,7 +97,7 @@ impl PlayerConnection {
         self.username.clone().unwrap()
     }
 
-    pub fn set_server_config(&mut self, server_config: Arc<std::sync::RwLock<ServerConfig>>) {
+    pub fn set_server_config(&mut self, server_config: Arc<RwLock<ServerConfig>>) {
         self.server_config = Some(server_config);
     }
 
