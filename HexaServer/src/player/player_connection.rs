@@ -54,10 +54,9 @@ impl PlayerConnection {
         }
     }
 
-    /*
-    pub fn set_socket_writer(&mut self, writer: WriteHalf<'_>) {
-        self.socket_writer = Some(writer);
-    }*/
+    pub fn get_server_config(&self) -> Arc<RwLock<ServerConfig>> {
+        self.server_config.clone().unwrap()
+    }
     pub fn is_send_blocks(&self) -> bool {
         self.sended_blocks
     }

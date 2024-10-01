@@ -19,18 +19,17 @@ pub async fn handle(
     let _ = length;
     let _ = reader;
     let mut client = client.lock().await;
+    let server_config_lock = client.get_server_config();
+    let mut server_config = server_config_lock.read().await;
     println!("Handled aknowlodge finish configuration");
     //Now we send the play packet
     let mut login_packet = PacketBuilder::new(0x2B);
     //ENTITY ID
     login_packet.write_int(
-        0, /*client
-          .get_server_config()
-          .write()
-          .unwrap()
+        0, /*server_config
           .get_entity_processor()
           .lock()
-          .next_entity_id(client),*/
+          .next_entity_id(client)*/
     );
     //HARDCORE
     login_packet.write_boolean(false);

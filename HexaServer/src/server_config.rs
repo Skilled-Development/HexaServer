@@ -3,6 +3,8 @@ use hexa_protocol_base::ServerVersion;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use crate::entity::entity_processor::EntityProcessor;
+
 pub struct ServerConfig {
     pub server_port: u16,
     pub server_ip: String,
@@ -16,6 +18,7 @@ pub struct ServerConfig {
     pub player_count: i32,
     pub max_player_count: i32,
     pub sample_text: Option<Vec<String>>,
+    pub entity_processor: Arc<Mutex<EntityProcessor>>,
 }
 
 impl ServerConfig {
@@ -40,11 +43,15 @@ impl ServerConfig {
                 "§9Empower your server with cutting-edge technology.".to_string(),
                 "§eHexaServer: Where §dspeed meets reliability.".to_string(),
             ]),
+            entity_processor: Arc::new(Mutex::new(EntityProcessor::new())),
         };
         config.update_server_icon_base64();
         config
     }
 
+    pub fn get_entity_processor(&self) -> Arc<Mutex<EntityProcessor>> {
+        Arc::clone(&self.entity_processor)
+    }
     pub fn update_server_icon_base64(&self) {
         let server_icon_url = self.server_icon_url.clone();
 

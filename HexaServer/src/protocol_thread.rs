@@ -86,15 +86,13 @@ impl ProtocolThread {
                     client
                 }
             };
-
             client
                 .lock()
                 .await
                 .set_server_config(self.server_config.clone());
-            //client.lock().await.set_socket_writer(writer_clone);
             let clients = self.clients.clone();
             tokio::spawn({
-                let clients_clone = clients.clone(); /*Este clients_clone en cuestion */
+                let clients_clone = clients.clone();
                 async move {
                     let result = Self::handle_client(reader, client, clients_clone).await;
                     if result.is_err() {
