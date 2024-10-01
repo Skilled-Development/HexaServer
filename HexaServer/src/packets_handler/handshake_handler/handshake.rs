@@ -5,18 +5,22 @@ use hexa_protocol::{packets::server::handshake::status_response_packet, Handshak
 use hexa_protocol_base::TextComponent;
 use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
 
-use crate::{player::player_connection::ClientState, PlayerConnection};
+use crate::player::{player::Player, player_connection::ClientState};
 
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
     reader: &mut OwnedReadHalf,
-    client: Arc<Mutex<PlayerConnection>>,
-    clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
+    client: Arc<Mutex<Player>>,
+    clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
 ) -> Result<(), String> {
     let _ = reader;
-
+    println!("Handling handshake packet");
     let mut client = client.lock().await;
+    println!("Client locked");
+    let connection = client.get_connection();
+    println!("Connection obtained");
+    let mut connection = connection.lock().await;
     print!("Handling handshake packet");
 
     if length > 3 {
@@ -24,7 +28,7 @@ pub async fn handle(
         client.set_protocol_version(handshake_packet.get_player_protocol());
         let next_state = handshake_packet.next_state;
         if next_state == 2 {
-            client.set_client_state(ClientState::LOGIN);
+            connection.set_client_state(ClientState::LOGIN);
         }
     } else {
         println!("Server config locked");
@@ -38,7 +42,7 @@ pub async fn handle(
             sample_text,
         ) = {
             println!("Getting server config");
-            if let Some(server_config) = &client.server_config {
+            if let Some(server_config) = &connection.server_config {
                 println!("Server config present");
                 let server_config_read_guard = server_config.read().await;
                 println!("Server config read guard");
@@ -76,7 +80,7 @@ pub async fn handle(
             let player_counting = clients_guard
                 .iter()
                 .filter_map(|(_, client)| client.try_lock().ok())
-                .filter(|client_guard| client_guard.client_state == ClientState::PLAY)
+                .filter(|_client_guard| connection.client_state == ClientState::PLAY)
                 .count();
 
             player_count = player_counting as i32;
@@ -99,7 +103,7 @@ pub async fn handle(
         .build();
         /* .send(socket)
         .await;*/
-        client
+        connection
             .send_packet_bytes(_status_response_packet.build())
             .await;
     }

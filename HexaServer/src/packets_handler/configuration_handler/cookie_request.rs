@@ -7,18 +7,20 @@ extern crate byteorder;
 extern crate rand;
 extern crate rsa;
 
-use crate::PlayerConnection;
+use crate::Player;
 // Asumiendo que tienes estas funciones
 
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
     reader: &mut OwnedReadHalf,
-    client: Arc<Mutex<PlayerConnection>>,
+    client: Arc<Mutex<Player>>,
 ) -> Result<(), String> {
     let _ = reader;
     let _ = length;
-    let mut client = client.lock().await;
+    let client = client.lock().await;
+    let connection = client.get_connection();
+    let mut connection = connection.lock().await;
     let mut reader = PacketReader::new(buffer);
     let key = reader.read_identifier(); // Ignorar el identificador del paquete
     let has_payload = reader.read_boolean(); // Ignorar el booleano que indica si hay un payload
@@ -44,6 +46,6 @@ pub async fn handle(
     let mut packet = BytesMut::new();
     protocol_util::write_varint(&mut packet, response_packet.len() as i32);
     packet.extend_from_slice(&response_packet);
-    client.send_packet_bytes(packet).await;
+    connection.send_packet_bytes(packet).await;
     Ok(())
 }

@@ -7,6 +7,7 @@ use tokio::net::tcp::OwnedReadHalf;
 use tokio::sync::Mutex;
 use tokio::task;
 
+use crate::player::player::Player;
 use crate::PlayerConnection;
 
 // Ensure PlayerConnection implements Send
@@ -16,14 +17,16 @@ pub async fn handle(
     length: i32,
     reader: &mut OwnedReadHalf,
     buffer: &mut BytesMut,
-    client: Arc<Mutex<PlayerConnection>>,
+    client: Arc<Mutex<Player>>,
 ) -> Result<(), String> {
     let _ = reader;
     if buffer.remaining() < length as usize {
         return Err("not_enough_data".to_string());
     }
     println!("Confirm teleport packet received");
-    let mut real_client = client.lock().await;
+    let real_client = client.lock().await;
+    let connection = real_client.get_connection();
+    let mut real_connection = connection.lock().await;
     println!("Reading packet");
     ConfirmTeleportPacket::read_packet(buffer, real_client.get_protocol_version());
     println!("Packet read");
@@ -31,15 +34,15 @@ pub async fn handle(
     center_packet.write_varint(0);
     center_packet.write_varint(0);
     println!("Sending center packet");
-    real_client.send_packet_builder(center_packet).await;
+    real_connection.send_packet_builder(center_packet).await;
     print!("Center packet sent");
 
     // Lanzar la tarea principal
-    let client_clone = Arc::clone(&client);
+    let connection_clone: Arc<Mutex<PlayerConnection>> = Arc::clone(&real_client.get_connection());
     task::spawn(async move {
         for x in -20..=20 {
             for z in -20..=20 {
-                generate_chunk_data_packet(client_clone.clone(), x, z).await;
+                generate_chunk_data_packet(connection_clone.clone(), x, z).await;
             }
         }
     });

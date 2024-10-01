@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Instant};
+use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use bytes::BytesMut;
 use hexa_protocol_base::{packet_builder::PacketElement, PacketBuilder};
@@ -7,30 +7,38 @@ extern crate byteorder;
 extern crate rand;
 extern crate rsa;
 
-use crate::{player::player_connection::ClientState, PlayerConnection};
+use crate::{entity::entity::Entity, player::player_connection::ClientState, Player};
 
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
     reader: &mut OwnedReadHalf,
-    client: Arc<Mutex<PlayerConnection>>,
+    client: Arc<Mutex<Player>>,
+    clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
 ) -> Result<(), String> {
     let _ = buffer;
     let _ = length;
     let _ = reader;
+    let client_clone = client.clone();
     let mut client = client.lock().await;
-    let server_config_lock = client.get_server_config();
-    let mut server_config = server_config_lock.read().await;
+    let connection = client.get_connection();
+    let mut connection = connection.lock().await;
+    let server_config_lock = connection.get_server_config();
+    let server_config = server_config_lock.read().await;
     println!("Handled aknowlodge finish configuration");
     //Now we send the play packet
     let mut login_packet = PacketBuilder::new(0x2B);
     //ENTITY ID
-    login_packet.write_int(
-        0, /*server_config
-          .get_entity_processor()
-          .lock()
-          .next_entity_id(client)*/
-    );
+    let entity_arc: Arc<Mutex<dyn Entity>> = client_clone as Arc<Mutex<dyn Entity>>;
+    // Llamamos a next_entity_id con la entidad convertida
+    let entity_id = server_config
+        .get_entity_processor()
+        .lock()
+        .await
+        .next_entity_id(entity_arc)
+        .await;
+    client.set_entity_id(entity_id);
+    login_packet.write_int(entity_id);
     //HARDCORE
     login_packet.write_boolean(false);
     let dimension_names = vec![
@@ -78,65 +86,15 @@ pub async fn handle(
     //ENFORCES SECURE CAHT
     login_packet.write_boolean(false);
 
-    /*let mut clone_packet = login_packet.clone();
-    let mut clone_packet_buffer = clone_packet.build();
-    let length = read_varint(&mut clone_packet_buffer).unwrap();
-    println!("Length: {}", length);
-    let packetId = read_varint(&mut clone_packet_buffer).unwrap();
-    println!("Packet ID: {}", packetId);
-    let mut clone_reader = PacketReader::new(&mut clone_packet_buffer);
-    let entity_id = clone_reader.read_int();
-    println!("Entity ID: {}", entity_id);
-    let hardcore = clone_reader.read_boolean();
-    println!("Hardcore: {}", hardcore);
-    let dimensions_count = clone_reader.read_varint();
-    println!("Dimensions count: {}", dimensions_count);
-    let mut dimensions_names = Vec::new();
-    for _ in 0..dimensions_count {
-        dimensions_names.push(clone_reader.read_string());
-    }
-    println!("Dimensions names: {:?}", dimensions_names);
-    let max_players = clone_reader.read_varint();
-    println!("Max players: {}", max_players);
-    let view_distance = clone_reader.read_varint();
-    println!("View distance: {}", view_distance);
-    let simulation_distance = clone_reader.read_varint();
-    println!("Simulation distance: {}", simulation_distance);
-    let reduced_debug_info = clone_reader.read_boolean();
-    println!("Reduced debug info: {}", reduced_debug_info);
-    let enable_respawn_screen = clone_reader.read_boolean();
-    println!("Enable respawn screen: {}", enable_respawn_screen);
-    let do_limited_crafting = clone_reader.read_boolean();
-    println!("Do limited crafting: {}", do_limited_crafting);
-    let dimension_type = clone_reader.read_varint();
-    println!("Dimension type: {}", dimension_type);
-    let dimension_name = clone_reader.read_string();
-    println!("Dimension name: {}", dimension_name);
-    let hashed_seed = clone_reader.read_long_be();
-    println!("Hashed seed: {}", hashed_seed);
-    let gamemode = clone_reader.read_unsigned_byte();
-    println!("Gamemode: {}", gamemode);
-    let previous_gamemode = clone_reader.read_byte();
-    println!("Previous gamemode: {}", previous_gamemode);
-    let is_debug = clone_reader.read_boolean();
-    println!("Is debug: {}", is_debug);
-    let is_flat = clone_reader.read_boolean();
-    println!("Is flat: {}", is_flat);
-    let has_death_location = clone_reader.read_boolean();
-    println!("Has death location: {}", has_death_location);
-    let portal_cooldown = clone_reader.read_varint();
-    println!("Portal cooldown: {}", portal_cooldown);
-    let enforces_secure_chat = clone_reader.read_boolean();
-    println!("Enforces secure chat: {}", enforces_secure_chat);*/
-
-    client.send_packet_builder(login_packet).await;
-    client.set_last_keep_alive(Instant::now());
-    client.set_client_state(ClientState::PLAY);
+    connection.send_packet_builder(login_packet).await;
+    connection.set_last_keep_alive(Instant::now());
+    client.set_position(0.0, 1000.0, 0.0);
+    connection.set_client_state(ClientState::PLAY);
 
     let mut game_event_packet = PacketBuilder::new(0x22);
     game_event_packet.write_unsigned_byte(13);
     game_event_packet.write_float(0f32);
-    client.send_packet_builder(game_event_packet).await;
+    connection.send_packet_builder(game_event_packet).await;
     let mut synchronize_position = PacketBuilder::new(0x40);
     synchronize_position.write_double(0.0);
     synchronize_position.write_double(1000.0);
@@ -145,6 +103,53 @@ pub async fn handle(
     synchronize_position.write_float(0.0);
     synchronize_position.write_byte(0);
     synchronize_position.write_varint(0);
-    client.send_packet_builder(synchronize_position).await;
+    connection.send_packet_builder(synchronize_position).await;
+
+    //TODO: spawn player
+    let mut spawn_player = PacketBuilder::new(0x01);
+    spawn_player.write_varint(entity_id);
+    spawn_player.write_uuid(client.get_uuid());
+    spawn_player.write_varint(122);
+    spawn_player.write_double(0.0);
+    spawn_player.write_double(1000.0);
+    spawn_player.write_double(0.0);
+    spawn_player.write_byte(0);
+    spawn_player.write_byte(0);
+    spawn_player.write_byte(0);
+    spawn_player.write_varint(0);
+    spawn_player.write_short(0);
+    spawn_player.write_short(0);
+    spawn_player.write_short(0);
+
+    {
+        let clients = clients.lock().await;
+        println!("Clients size: {}", clients.len());
+        for (client_id, other_client) in clients.iter() {
+            if *client_id == connection.get_connection_id() {
+                continue;
+            }
+            let other_client = other_client.lock().await;
+            let other_connection = other_client.get_connection();
+            let mut other_connection = other_connection.lock().await;
+            other_connection
+                .send_packet_builder(spawn_player.clone())
+                .await;
+            let mut spawn_player = PacketBuilder::new(0x01);
+            spawn_player.write_varint(other_client.get_entity_id());
+            spawn_player.write_uuid(other_client.get_uuid());
+            spawn_player.write_varint(122);
+            spawn_player.write_double(other_client.get_position().0);
+            spawn_player.write_double(other_client.get_position().1);
+            spawn_player.write_double(other_client.get_position().2);
+            spawn_player.write_byte(other_client.get_rotation().0);
+            spawn_player.write_byte(other_client.get_rotation().1);
+            spawn_player.write_byte(other_client.get_head_rotation());
+            spawn_player.write_varint(0);
+            spawn_player.write_short(other_client.get_velocity().0);
+            spawn_player.write_short(other_client.get_velocity().1);
+            spawn_player.write_short(other_client.get_velocity().2);
+            connection.send_packet_builder(spawn_player).await;
+        }
+    }
     Ok(())
 }

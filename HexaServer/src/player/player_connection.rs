@@ -25,9 +25,7 @@ pub struct PlayerConnection {
     pub port: u16,
     pub client_state: ClientState,
     pub username: Option<String>,
-    pub uuid: Option<uuid::Uuid>,
     pub server_config: Option<Arc<RwLock<ServerConfig>>>,
-    pub protocol_version: Option<i32>,
     pub last_keep_alive: Option<std::time::Instant>,
     pub keep_alive_id: Option<i64>,
     pub sended_blocks: bool,
@@ -44,14 +42,16 @@ impl PlayerConnection {
             port,
             client_state: ClientState::HANDSHAKE,
             username: None,
-            uuid: None,
             server_config: None,
-            protocol_version: None,
             last_keep_alive: None,
             keep_alive_id: None,
             sended_blocks: false,
             writer: Arc::new(Mutex::new(writer)), // Envolver el writer en Arc<Mutex<>>
         }
+    }
+
+    pub fn get_connection_id(&self) -> String {
+        self.ip_address.clone() + ":" + &self.port.to_string()
     }
 
     pub fn get_server_config(&self) -> Arc<RwLock<ServerConfig>> {
@@ -62,10 +62,6 @@ impl PlayerConnection {
     }
     pub fn set_send_blocks(&mut self, sended_blocks: bool) {
         self.sended_blocks = sended_blocks;
-    }
-
-    pub fn set_protocol_version(&mut self, protocol_version: i32) {
-        self.protocol_version = Some(protocol_version);
     }
 
     pub fn set_last_keep_alive(&mut self, last_keep_alive: std::time::Instant) {
@@ -79,9 +75,6 @@ impl PlayerConnection {
     }
     pub fn get_last_keep_alive(&self) -> std::time::Instant {
         self.last_keep_alive.clone().unwrap()
-    }
-    pub fn get_protocol_version(&self) -> i32 {
-        self.protocol_version.clone().unwrap()
     }
 
     pub fn set_client_state(&mut self, client_state: ClientState) {
@@ -98,14 +91,6 @@ impl PlayerConnection {
 
     pub fn set_server_config(&mut self, server_config: Arc<RwLock<ServerConfig>>) {
         self.server_config = Some(server_config);
-    }
-
-    pub fn set_uuid(&mut self, uuid: uuid::Uuid) {
-        self.uuid = Some(uuid);
-    }
-
-    pub fn get_uuid(&self) -> uuid::Uuid {
-        self.uuid.clone().unwrap()
     }
 
     pub fn get_client_state(&self) -> ClientState {

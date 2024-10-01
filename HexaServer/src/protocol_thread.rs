@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 use bytes::{Buf, BufMut, BytesMut};
 use hexa_protocol_base::PacketBuilder;
 use rand::Rng;
+use serde::de;
 use tokio::{
     io::AsyncReadExt,
     net::{tcp::OwnedReadHalf, TcpListener},
@@ -10,6 +11,7 @@ use tokio::{
 };
 
 use crate::{
+    entity::entity_processor,
     packets_handler::{
         configuration_handler::{
             aknowlodge_finish_configuration, client_information, cookie_request,
@@ -22,14 +24,14 @@ use crate::{
             set_player_position, set_player_position_and_rotation, swing_arm,
         },
     },
-    player::player_connection::ClientState,
-    PlayerConnection, ServerConfig,
+    player::{player::Player, player_connection::ClientState},
+    server_config, PlayerConnection, ServerConfig,
 };
 
 pub struct ProtocolThread {
     pub port: u16,
     pub address: String,
-    pub clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
+    pub clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     pub server_name: String,
     pub server_versions: Vec<i32>,
     pub server_config: Arc<RwLock<ServerConfig>>,
@@ -71,33 +73,65 @@ impl ProtocolThread {
             println!("New connection from {}:{}..", ip_address, port);
             let address = format!("{}:{}", ip_address, port);
             let client = self.clients.lock().await.get(&address).cloned();
-            let client = match client {
-                Some(client) => client,
+            let (connection, client) = match client {
+                Some(client) => {
+                    let connection = client.lock().await.get_connection();
+                    (connection, client.clone())
+                }
                 None => {
-                    let client = Arc::new(Mutex::new(PlayerConnection::new(
+                    let connection = Arc::new(Mutex::new(PlayerConnection::new(
                         ip_address.clone(),
                         port,
                         writer,
                     )));
-                    self.clients
-                        .lock()
-                        .await
-                        .insert(client.lock().await.ip_address.clone(), client.clone());
-                    client
+                    let client = Arc::new(Mutex::new(Player::new(connection.clone())));
+                    let connection_clone = connection.clone();
+                    let locked = connection_clone.lock().await;
+                    self.clients.lock().await.insert(
+                        locked.ip_address.clone() + ":" + &locked.port.to_string(),
+                        client.clone(),
+                    );
+                    (connection, client)
                 }
             };
-            client
+            connection
                 .lock()
                 .await
                 .set_server_config(self.server_config.clone());
             let clients = self.clients.clone();
+            let client_clone = client.clone();
             tokio::spawn({
                 let clients_clone = clients.clone();
                 async move {
                     let result = Self::handle_client(reader, client, clients_clone).await;
                     if result.is_err() {
                         let mut clients_lock = clients.lock().await;
+                        let client_clone = client_clone.lock().await;
+                        let deleted_entity_id = client_clone.get_entity_id();
+                        if deleted_entity_id == -1 {
+                            clients_lock.remove(&address);
+                            return;
+                        }
+                        let connection = client_clone.get_connection();
+                        let connection = connection.lock().await;
+                        let server_config_lock = connection.get_server_config();
+                        let server_config = server_config_lock.read().await;
+                        let entity_processor = server_config.get_entity_processor();
+                        let entity_processor = entity_processor.lock().await;
+                        entity_processor.remove_entity(deleted_entity_id).await;
                         clients_lock.remove(&address);
+                        let mut remove_entity_packet = PacketBuilder::new(0x42);
+                        remove_entity_packet.write_varint(1);
+                        remove_entity_packet.write_varint(deleted_entity_id);
+
+                        for (_client_id, other_client) in clients_lock.iter() {
+                            let other_client = other_client.lock().await;
+                            let other_connection = other_client.get_connection();
+                            let mut other_connection = other_connection.lock().await;
+                            other_connection
+                                .send_packet_builder(remove_entity_packet.clone())
+                                .await;
+                        }
                         println!("Client {} deleted from list of clients.", address);
                     }
                 }
@@ -107,8 +141,8 @@ impl ProtocolThread {
 
     pub async fn handle_client(
         mut reader: OwnedReadHalf,
-        client: Arc<Mutex<PlayerConnection>>,
-        clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
+        client: Arc<Mutex<Player>>,
+        clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
         let mut buffer = BytesMut::with_capacity(1024);
         loop {
@@ -151,13 +185,23 @@ impl ProtocolThread {
     async fn process_packet(
         buffer: &mut BytesMut,
         reader: &mut OwnedReadHalf,
-        client: Arc<Mutex<PlayerConnection>>,
-        clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
+        client: Arc<Mutex<Player>>,
+        clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
-        /*println!("Processing packet...");
-        println!("Buffer: {:?}", buffer);*/
-        let client_state = client.lock().await.client_state.clone();
+        let (client_state, entity_id, connection_id) = {
+            let real_client = client.lock().await;
+            let connection = real_client.get_connection();
+            let connection = connection.lock().await;
+            (
+                connection.get_client_state(),
+                real_client.get_entity_id(),
+                connection.get_connection_id(),
+            )
+        };
+
         println!("Client state: {:?}", client_state);
+        println!("Entity ID: {:?}", entity_id);
+        println!("Connection ID: {:?}", connection_id);
         if buffer.is_empty() {
             println!("Empty buffer");
             return Ok(());
@@ -189,17 +233,26 @@ impl ProtocolThread {
         println!("Packet ID: 0x{:X}", packet_id);*/
         let result: Result<(), String> = match client_state {
             ClientState::HANDSHAKE => {
-                Self::handshake_handler(packet_id, length, buffer, reader, client, clients).await
-            }
-            ClientState::LOGIN => {
-                Self::login_handler(packet_id, length, buffer, reader, client, clients).await
-            }
-            ClientState::CONFIGURATION => {
-                Self::configuration_handler(packet_id, length, buffer, reader, client, clients)
+                Self::handshake_handler(packet_id, length, buffer, reader, client.clone(), clients)
                     .await
             }
+            ClientState::LOGIN => {
+                Self::login_handler(packet_id, length, buffer, reader, client.clone(), clients)
+                    .await
+            }
+            ClientState::CONFIGURATION => {
+                Self::configuration_handler(
+                    packet_id,
+                    length,
+                    buffer,
+                    reader,
+                    client.clone(),
+                    clients,
+                )
+                .await
+            }
             ClientState::PLAY => {
-                Self::play_handler(packet_id, length, buffer, reader, client, clients).await
+                Self::play_handler(packet_id, length, buffer, reader, client.clone(), clients).await
             }
         };
         if result.is_err() {
@@ -226,17 +279,18 @@ impl ProtocolThread {
         length: i32,
         buffer: &mut BytesMut,
         reader: &mut OwnedReadHalf,
-        client: Arc<Mutex<PlayerConnection>>,
-        clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
+        client: Arc<Mutex<Player>>,
+        clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
-        let _ = clients;
-
         let client_clone = client.clone();
         let result_on_read = match packet_id {
             0x00 => confirm_teletransportation::handle(length, reader, buffer, client).await,
             0x21 => ping_request_play::handle(length, buffer, client).await,
             0x1A => set_player_position::handle(length, buffer, reader, client).await,
-            0x1B => set_player_position_and_rotation::handle(length, buffer, reader, client).await,
+            0x1B => {
+                set_player_position_and_rotation::handle(length, buffer, reader, client, clients)
+                    .await
+            }
             0x2F => set_item_held::handle(length, buffer, reader, client).await,
             0x36 => swing_arm::handle(length, buffer, reader, client).await,
             0x18 => keep_alive::handle(length, buffer, reader, client).await,
@@ -247,21 +301,24 @@ impl ProtocolThread {
                 return Err("Unknown packet ID".to_string());
             }
         };
-        let mut client_guard = client_clone.lock().await;
+        let client_guard = client_clone.lock().await;
+        let connection_guard = client_guard.get_connection();
+        let mut connection_guard = connection_guard.lock().await;
         if result_on_read.is_ok() {
-            let client_last_keep_alive = client_guard.get_last_keep_alive();
+            let client_last_keep_alive = connection_guard.get_last_keep_alive();
             if client_last_keep_alive.elapsed().as_millis() > 17000 {
-                println!("Client {} timed out", client_guard.ip_address);
+                println!("Client {} timed out", connection_guard.ip_address);
                 let mut keep_alive_packet = PacketBuilder::new(0x26);
                 let random_id: i64 = rand::thread_rng().gen();
                 keep_alive_packet.write_long_be(random_id);
-                client_guard.send_packet_builder(keep_alive_packet).await;
-                //keep_alive_packet.send(socket).await?;
-                client_guard.set_keep_alive_id(random_id);
-                client_guard.set_last_keep_alive(Instant::now());
+                connection_guard
+                    .send_packet_builder(keep_alive_packet)
+                    .await;
+                connection_guard.set_keep_alive_id(random_id);
+                connection_guard.set_last_keep_alive(Instant::now());
                 println!(
                     "Sent keep alive packet to client {} with alive id {}",
-                    client_guard.ip_address, random_id
+                    connection_guard.ip_address, random_id
                 );
             }
         } else {
@@ -275,11 +332,9 @@ impl ProtocolThread {
         length: i32,
         buffer: &mut BytesMut,
         reader: &mut OwnedReadHalf,
-        client: Arc<Mutex<PlayerConnection>>,
-        clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
+        client: Arc<Mutex<Player>>,
+        clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
-        let _ = clients;
-
         match packet_id {
             0x00 => return client_information::handle(length, buffer, reader, client).await,
             0x01 => return cookie_request::handle(length, buffer, reader, client).await,
@@ -287,8 +342,10 @@ impl ProtocolThread {
                 return server_bound_configuration::handle(length, buffer, reader, client).await
             }
             0x03 => {
-                return aknowlodge_finish_configuration::handle(length, buffer, reader, client)
-                    .await
+                return aknowlodge_finish_configuration::handle(
+                    length, buffer, reader, client, clients,
+                )
+                .await
             }
             0x07 => return server_bound_known_packs::handle(length, buffer, reader, client).await,
             _ => println!("Unknown packet ID: {} in configuration handler", packet_id),
@@ -301,8 +358,8 @@ impl ProtocolThread {
         length: i32,
         buffer: &mut BytesMut,
         reader: &mut OwnedReadHalf,
-        client: Arc<Mutex<PlayerConnection>>,
-        clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
+        client: Arc<Mutex<Player>>,
+        clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
         let _ = clients;
         match packet_id {
@@ -317,8 +374,8 @@ impl ProtocolThread {
         length: i32,
         buffer: &mut BytesMut,
         reader: &mut OwnedReadHalf,
-        client: Arc<Mutex<PlayerConnection>>,
-        clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
+        client: Arc<Mutex<Player>>,
+        clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
         match packet_id {
             0x00 => {

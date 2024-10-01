@@ -15,17 +15,19 @@ use rsa::{RsaPrivateKey, RsaPublicKey};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-use crate::PlayerConnection;
+use crate::{Player, PlayerConnection};
 // Asumiendo que tienes estas funciones
 
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
     reader: &mut OwnedReadHalf,
-    client: Arc<Mutex<PlayerConnection>>,
+    client: Arc<Mutex<Player>>,
 ) -> Result<(), String> {
     let _ = reader;
     let mut client = client.lock().await;
+    let connection = client.get_connection();
+    let mut connection = connection.lock().await;
     let _ = length;
     let mut reader = PacketReader::new(buffer);
     let username = reader.read_string();
@@ -33,13 +35,13 @@ pub async fn handle(
     let uuid = reader.read_uuid();
     println!("UUID: {}", uuid);
 
-    client.set_username(username.clone());
+    client.set_name(username.clone());
     client.set_uuid(uuid);
 
     //let (public_key, verify_token) = generate_keys();
 
     // Crear el paquete con public key y verify token
-    let _ = send_login_success_packet(&mut client, &username, uuid.to_string()).await;
+    let _ = send_login_success_packet(&mut connection, &username, uuid.to_string()).await;
 
     Ok(())
 }
@@ -85,7 +87,7 @@ fn _create_packet(public_key: &RsaPublicKey, verify_token: &[u8]) -> Vec<u8> {
 }
 
 async fn send_login_success_packet(
-    client: &mut PlayerConnection,
+    connection: &mut PlayerConnection,
     username: &str,
     uuid_string: String,
 ) -> Result<(), String> {
@@ -96,7 +98,7 @@ async fn send_login_success_packet(
         .write_string(username)
         .write_varint(0)
         .write_boolean(false);
-    client.send_packet_builder(packet).await;
+    connection.send_packet_builder(packet).await;
 
     Ok(())
 }

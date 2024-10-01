@@ -7,22 +7,22 @@ use hexa_protocol::packets::{
 };
 use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
 
-use crate::PlayerConnection;
+use crate::{player::player::Player, PlayerConnection};
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
     reader: &mut OwnedReadHalf,
-    client: Arc<Mutex<PlayerConnection>>,
+    client: Arc<Mutex<Player>>,
 ) -> Result<(), String> {
     let _ = reader;
-    let mut client = client.lock().await;
+    let client = client.lock().await;
+    let connection: Arc<Mutex<PlayerConnection>> = client.get_connection();
+    let mut connection = connection.lock().await;
     let _ = length;
     let request_packet = PingRequestPacket::read_packet(buffer);
     let _response_packet = PingResponsePacket::new(request_packet.get_payload());
-    client
+    connection
         .send_packet_bytes(_response_packet.build().build())
         .await;
-    //_response_packet.build().send(socket).await?;
-    //client.send_packet(_response_packet.build().build()).await;
     Ok(())
 }

@@ -7,14 +7,14 @@ extern crate byteorder;
 extern crate rand;
 extern crate rsa;
 
-use crate::PlayerConnection;
+use crate::Player;
 // Asumiendo que tienes estas funciones
 
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
     reader: &mut OwnedReadHalf,
-    client: Arc<Mutex<PlayerConnection>>,
+    client: Arc<Mutex<Player>>,
 ) -> Result<(), String> {
     let _ = client;
     let _ = reader;

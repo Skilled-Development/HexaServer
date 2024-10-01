@@ -30,6 +30,7 @@ pub mod packets_handler {
     }
 }
 pub mod player {
+    pub mod game_mode;
     pub mod player;
     pub mod player_connection;
 }
@@ -42,6 +43,7 @@ pub mod server_config;
 
 pub use hexa_server::HexaServer;
 pub use monitor::Monitor;
+pub use player::player::Player;
 pub use player::player_connection::PlayerConnection;
 pub use protocol_thread::ProtocolThread;
 pub use server_config::ServerConfig;

@@ -15,7 +15,7 @@ hexa_protocol = { path = "../HexaProtocols/HexaProtocol" }
 hexa_protocol_base = { path = "../HexaProtocols/HexaProtocolBase" }
 hexa_protocol_1_21 = { path = "../HexaProtocols/HexaProtocol_1_21" }
 byteorder = "1.4"
-uuid = "1.5"
+uuid = { version = "1.5", features = ["v4"] }
 rsa = "0.8.0"
 rand = "0.8"
 spki = "0.6"

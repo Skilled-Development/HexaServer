@@ -7,18 +7,20 @@ extern crate byteorder;
 extern crate rand;
 extern crate rsa;
 
-use crate::PlayerConnection;
+use crate::Player;
 // Asumiendo que tienes estas funciones
 
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
     reader: &mut OwnedReadHalf,
-    client: Arc<Mutex<PlayerConnection>>,
+    client: Arc<Mutex<Player>>,
 ) -> Result<(), String> {
     let _ = length;
     let _ = reader;
-    let mut client = client.lock().await;
+    let client = client.lock().await;
+    let connection = client.get_connection();
+    let mut connection = connection.lock().await;
     let mut reader = PacketReader::new(buffer);
     let locale = reader.read_string();
     let view_distance = reader.read_byte();
@@ -45,6 +47,6 @@ pub async fn handle(
     packet_builder.write_string("core");
     packet_builder.write_string("1.21");
 
-    client.send_packet_builder(packet_builder).await;
+    connection.send_packet_builder(packet_builder).await;
     Ok(())
 }

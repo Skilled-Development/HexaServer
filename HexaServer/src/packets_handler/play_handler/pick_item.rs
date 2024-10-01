@@ -4,13 +4,13 @@ use bytes::{Buf, BytesMut};
 use hexa_protocol_base::PacketReader;
 use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
 
-use crate::PlayerConnection;
+use crate::player::player::Player;
 
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
     reader: &mut OwnedReadHalf,
-    client: Arc<Mutex<PlayerConnection>>,
+    client: Arc<Mutex<Player>>,
 ) -> Result<(), String> {
     let _ = reader;
     let _ = client;
