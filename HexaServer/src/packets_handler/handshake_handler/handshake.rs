@@ -5,7 +5,7 @@ use hexa_protocol::{packets::server::handshake::status_response_packet, Handshak
 use hexa_protocol_base::TextComponent;
 use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
 
-use crate::{player::player_connection::ClientState, PlayerConnection};
+use crate::{player::player_connection::ClientState, server_config, PlayerConnection};
 
 pub async fn handle(
     length: i32,
@@ -15,7 +15,10 @@ pub async fn handle(
     clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
 ) -> Result<(), String> {
     let _ = reader;
+
     let mut client = client.lock().await;
+    print!("Handling handshake packet");
+
     if length > 3 {
         let handshake_packet = HandshakePacket::read_packet(buffer);
         client.set_protocol_version(handshake_packet.get_player_protocol());
@@ -24,6 +27,7 @@ pub async fn handle(
             client.set_client_state(ClientState::LOGIN);
         }
     } else {
+        println!("Server config locked");
         let (
             server_name,
             server_versions,
@@ -33,9 +37,13 @@ pub async fn handle(
             max_player_count,
             sample_text,
         ) = {
+            println!("Getting server config");
             if let Some(server_config) = &client.server_config {
+                println!("Server config present");
                 let server_config_read_guard = server_config.read().unwrap();
-                let server_name = server_config_read_guard.server_name.clone();
+                println!("Server config read guard");
+                let server_name = server_config_read_guard.get_server_name();
+                println!("Server name: {}", server_name);
                 let server_versions = server_config_read_guard
                     .get_protocol_versions_array()
                     .clone();

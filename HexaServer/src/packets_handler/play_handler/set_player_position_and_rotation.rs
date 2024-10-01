@@ -20,7 +20,7 @@ pub async fn handle(
     }
     let packet =
         SetPlayerPositionAndRotationPacket::read_packet(buffer, client.get_protocol_version());
-    println!(
+    /*println!(
         "x: {}, y: {}, z: {}, yaw: {}, pitch: {}, on_ground: {}",
         packet.get_x(),
         packet.get_y(),
@@ -28,6 +28,6 @@ pub async fn handle(
         packet.get_yaw(),
         packet.get_pitch(),
         packet.get_on_ground()
-    );
+    );*/
     Ok(())
 }

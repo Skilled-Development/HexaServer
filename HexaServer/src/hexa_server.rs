@@ -1,9 +1,9 @@
-use std::{
-    sync::{Arc, RwLock},
-    process,
-};
 use crate::{Monitor, ProtocolThread};
 use hexa_protocol_base::ServerVersion;
+use std::{
+    process,
+    sync::{Arc, RwLock},
+};
 
 pub struct HexaServer {
     server_config: Arc<RwLock<crate::ServerConfig>>,
@@ -16,17 +16,15 @@ impl HexaServer {
             server_config: Arc::new(RwLock::new(crate::ServerConfig::new(
                 server_name,
                 25565,
-                "0.0.0.0".to_string()
+                "0.0.0.0".to_string(),
             ))),
-            pid: None, 
+            pid: None,
         }
     }
 
     pub fn init_pid(&mut self) {
-        self.pid = Some(process::id() as usize); 
+        self.pid = Some(process::id() as usize);
     }
-
-    
 
     pub fn add_version(&mut self, version: Arc<dyn ServerVersion + Send + Sync>) {
         let mut config_guard = self.server_config.write().unwrap();
@@ -42,29 +40,23 @@ impl HexaServer {
         self.server_config.read().unwrap().get_server_name()
     }
 
-
-
     pub async fn start(&mut self) {
         self.init_pid();
-        if self.server_config.read().unwrap().enable_monitoring{
+        if self.server_config.read().unwrap().enable_monitoring {
             let mut monitor_thread = Monitor::new(self.pid.unwrap().try_into().unwrap());
             let _monitor_handle = tokio::spawn(async move {
                 monitor_thread.start_memory_monitor().await;
             });
-        }   
+        }
         let versions = self.server_config.read().unwrap().versions.clone();
         if versions.is_empty() {
             println!("No versions available. Shutting down HexaServer...");
             return;
         }
 
-        println!(
-            "HexaServer is starting with {} versions...",
-            versions.len()
-        );
+        println!("HexaServer is starting with {} versions...", versions.len());
 
         let versions_vector: Vec<i32> = versions.iter().map(|v| v.protocol()).collect();
-        
 
         let mut protocol_thread = ProtocolThread::new(
             self.server_config.read().unwrap().server_port,
@@ -74,14 +66,10 @@ impl HexaServer {
             Arc::clone(&self.server_config),
         );
 
-        
-
         let protocol_handle = tokio::spawn(async move {
             protocol_thread.start().await;
-
         });
 
-    
         tokio::select! {
             _ = protocol_handle => {
                 println!("Protocol thread has finished.");

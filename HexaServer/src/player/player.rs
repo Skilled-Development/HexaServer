@@ -1,4 +1,6 @@
-pub struct Player{
+use crate::entity::entity::Entity;
+
+pub struct Player {
     pub name: String,
     pub uuid: uuid::Uuid,
     pub entity_id: i32,
@@ -14,8 +16,28 @@ pub struct Player{
     pub pitch: f32,
 }
 
+impl Entity for Player {
+    fn get_id(&self) -> i32 {
+        0
+    }
+}
+
 impl Player {
-    pub fn new(name: String, uuid: uuid::Uuid,entity_id:i32, health: i32, hunger: i32, experience: i32, level: i32, gamemode: i32, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) -> Player {
+    pub fn new(
+        name: String,
+        uuid: uuid::Uuid,
+        entity_id: i32,
+        health: i32,
+        hunger: i32,
+        experience: i32,
+        level: i32,
+        gamemode: i32,
+        x: f64,
+        y: f64,
+        z: f64,
+        yaw: f32,
+        pitch: f32,
+    ) -> Player {
         Player {
             name,
             uuid,
