@@ -7,9 +7,7 @@ extern crate byteorder;
 extern crate rand;
 extern crate rsa;
 
-use crate::{
-    player::player_connection::ClientState, server_config, PlayerConnection, ServerConfig,
-};
+use crate::{player::player_connection::ClientState, PlayerConnection};
 
 pub async fn handle(
     length: i32,
@@ -25,7 +23,15 @@ pub async fn handle(
     //Now we send the play packet
     let mut login_packet = PacketBuilder::new(0x2B);
     //ENTITY ID
-    login_packet.write_int(0);
+    login_packet.write_int(
+        0, /*client
+          .get_server_config()
+          .write()
+          .unwrap()
+          .get_entity_processor()
+          .lock()
+          .next_entity_id(client)*/
+    );
     //HARDCORE
     login_packet.write_boolean(false);
     let dimension_names = vec![

@@ -69,6 +69,19 @@ impl ServerConfig {
         });
     }
 
+    fn download_image_as_base64(url: &str) -> Result<String, Box<dyn Error>> {
+        let response = get(url)?;
+
+        if !response.status().is_success() {
+            return Err(format!("Failed to download image: HTTP {}", response.status()).into());
+        }
+
+        let image_bytes = response.bytes()?;
+        let base64_string = general_purpose::STANDARD.encode(&image_bytes);
+
+        Ok(base64_string)
+    }
+
     pub fn get_server_name(&self) -> String {
         self.server_name.clone()
     }
@@ -97,18 +110,5 @@ impl ServerConfig {
     pub fn set_server_icon_url(&mut self, server_icon_url: String) {
         self.server_icon_url = Some(server_icon_url);
         self.update_server_icon_base64();
-    }
-
-    fn download_image_as_base64(url: &str) -> Result<String, Box<dyn Error>> {
-        let response = get(url)?;
-
-        if !response.status().is_success() {
-            return Err(format!("Failed to download image: HTTP {}", response.status()).into());
-        }
-
-        let image_bytes = response.bytes()?;
-        let base64_string = general_purpose::STANDARD.encode(&image_bytes);
-
-        Ok(base64_string)
     }
 }

@@ -9,6 +9,9 @@ use tokio::task;
 
 use crate::PlayerConnection;
 
+// Ensure PlayerConnection implements Send
+unsafe impl Send for PlayerConnection {}
+
 pub async fn handle(
     length: i32,
     reader: &mut OwnedReadHalf,

@@ -18,7 +18,7 @@ pub async fn handle(
     if buffer.remaining() < 33 as usize {
         return Err("not_enough_data".to_string());
     }
-    let packet =
+    let _packet =
         SetPlayerPositionAndRotationPacket::read_packet(buffer, client.get_protocol_version());
     /*println!(
         "x: {}, y: {}, z: {}, yaw: {}, pitch: {}, on_ground: {}",
