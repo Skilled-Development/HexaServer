@@ -1,18 +1,24 @@
-use std:: time::Instant;
+use std::{sync::Arc, time::Instant};
 
 use bytes::BytesMut;
 use hexa_protocol_base::{packet_builder::PacketElement, PacketBuilder};
-use tokio::net::TcpStream;
-extern crate rsa;
-extern crate rand;
+use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
 extern crate byteorder;
+extern crate rand;
+extern crate rsa;
 
 use crate::{player::player_connection::ClientState, PlayerConnection};
 
-pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {
+pub async fn handle(
+    length: i32,
+    buffer: &mut BytesMut,
+    reader: &mut OwnedReadHalf,
+    client: Arc<Mutex<PlayerConnection>>,
+) -> Result<(), String> {
     let _ = buffer;
-    let _ = client;
     let _ = length;
+    let _ = reader;
+    let mut client = client.lock().await;
     println!("Handled aknowlodge finish configuration");
     //Now we send the play packet
     let mut login_packet = PacketBuilder::new(0x2B);
@@ -22,10 +28,10 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     login_packet.write_boolean(false);
     let dimension_names = vec![
         PacketElement::String("minecraft:overworld"),
-         PacketElement::String("minecraft:the_nether"), 
-         PacketElement::String("minecraft:the_end"),
-         PacketElement::String("minecraft:overworld_caves")
-         ];
+        PacketElement::String("minecraft:the_nether"),
+        PacketElement::String("minecraft:the_end"),
+        PacketElement::String("minecraft:overworld_caves"),
+    ];
     //DIMENSIONS COUNT
     login_packet.write_varint(dimension_names.len() as i32);
     //DIMENSIONS NAMES
@@ -73,7 +79,7 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     println!("Packet ID: {}", packetId);
     let mut clone_reader = PacketReader::new(&mut clone_packet_buffer);
     let entity_id = clone_reader.read_int();
-    println!("Entity ID: {}", entity_id);   
+    println!("Entity ID: {}", entity_id);
     let hardcore = clone_reader.read_boolean();
     println!("Hardcore: {}", hardcore);
     let dimensions_count = clone_reader.read_varint();
@@ -116,18 +122,14 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     let enforces_secure_chat = clone_reader.read_boolean();
     println!("Enforces secure chat: {}", enforces_secure_chat);*/
 
-
-
-
-    login_packet.send(socket).await?;
+    client.send_packet_builder(login_packet).await;
     client.set_last_keep_alive(Instant::now());
     client.set_client_state(ClientState::PLAY);
-
 
     let mut game_event_packet = PacketBuilder::new(0x22);
     game_event_packet.write_unsigned_byte(13);
     game_event_packet.write_float(0f32);
-    game_event_packet.send(socket).await?;
+    client.send_packet_builder(game_event_packet).await;
     let mut synchronize_position = PacketBuilder::new(0x40);
     synchronize_position.write_double(0.0);
     synchronize_position.write_double(1000.0);
@@ -136,6 +138,6 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     synchronize_position.write_float(0.0);
     synchronize_position.write_byte(0);
     synchronize_position.write_varint(0);
-    synchronize_position.send(socket).await?;
+    client.send_packet_builder(synchronize_position).await;
     Ok(())
 }

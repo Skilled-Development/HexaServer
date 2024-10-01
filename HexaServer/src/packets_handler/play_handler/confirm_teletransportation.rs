@@ -1,39 +1,53 @@
+use std::sync::Arc;
+
 use bytes::{Buf, BytesMut};
 use hexa_protocol::packets::client::play::confirm_teleport_packet::ConfirmTeleportPacket;
-use hexa_protocol_base::{chunk, PacketBuilder};
-use tokio::net::TcpStream;
+use hexa_protocol_base::PacketBuilder;
+use tokio::net::tcp::OwnedReadHalf;
+use tokio::sync::Mutex;
 use tokio::task;
 
 use crate::PlayerConnection;
 
 pub async fn handle(
     length: i32,
-    socket: &mut TcpStream,
+    reader: &mut OwnedReadHalf,
     buffer: &mut BytesMut,
-    client: &mut PlayerConnection,
+    client: Arc<Mutex<PlayerConnection>>,
 ) -> Result<(), String> {
+    let _ = reader;
     if buffer.remaining() < length as usize {
         return Err("not_enough_data".to_string());
     }
-    ConfirmTeleportPacket::read_packet(buffer, client.get_protocol_version());
-
+    println!("Confirm teleport packet received");
+    let mut real_client = client.lock().await;
+    println!("Reading packet");
+    ConfirmTeleportPacket::read_packet(buffer, real_client.get_protocol_version());
+    println!("Packet read");
     let mut center_packet = PacketBuilder::new(0x54);
     center_packet.write_varint(0);
     center_packet.write_varint(0);
-    center_packet.send(socket).await?;
+    println!("Sending center packet");
+    real_client.send_packet_builder(center_packet).await;
+    print!("Center packet sent");
 
     // Lanzar la tarea principal
-    /*task::spawn(async move {
+    let client_clone = Arc::clone(&client);
+    task::spawn(async move {
         for x in -20..=20 {
             for z in -20..=20 {
-                generate_chunk_data_packet(socket, x, z).await;
+                generate_chunk_data_packet(client_clone.clone(), x, z).await;
             }
         }
-    });*/
-
+    });
+    println!("Chunks sent");
     Ok(())
 }
-async fn generate_chunk_data_packet(socket: &mut TcpStream, chunk_x: i32, chunk_y: i32) {
+async fn generate_chunk_data_packet(
+    client: Arc<Mutex<PlayerConnection>>,
+    chunk_x: i32,
+    chunk_y: i32,
+) {
     let mut packet = PacketBuilder::new(0x27);
     packet.write_int(chunk_x);
     packet.write_int(chunk_y);
@@ -76,5 +90,5 @@ async fn generate_chunk_data_packet(socket: &mut TcpStream, chunk_x: i32, chunk_
     packet.write_varint(0);
     // Block light array count
     packet.write_varint(0);
-    packet.send(socket).await.unwrap();
+    client.lock().await.send_packet_builder(packet).await;
 }

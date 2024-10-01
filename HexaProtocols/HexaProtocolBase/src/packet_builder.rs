@@ -1,7 +1,7 @@
+use bit_set::BitSet;
 use bytes::{BufMut, BytesMut};
 use tokio::io::AsyncWriteExt;
 use uuid::Uuid;
-use bit_set::BitSet;
 pub enum PacketElement<'a> {
     Int(i32),
     Short(i16),
@@ -14,14 +14,14 @@ pub enum PacketElement<'a> {
     ByteArray(&'a [u8]),
 }
 #[derive(Clone)]
-pub struct PacketBuilder{
+pub struct PacketBuilder {
     pub buffer: BytesMut,
     pub packet_id: i32,
 }
 
 impl PacketBuilder {
-    pub fn new(packet_id:i32) -> PacketBuilder {
-        let mut builder =PacketBuilder {
+    pub fn new(packet_id: i32) -> PacketBuilder {
+        let mut builder = PacketBuilder {
             buffer: BytesMut::new(),
             packet_id,
         };
@@ -34,7 +34,7 @@ impl PacketBuilder {
             self.write_long_be(*value);
         }
         self
-    }    
+    }
 
     pub fn write_bitset(&mut self, bitset: &BitSet) -> &mut Self {
         let long_array: Vec<i64> = bitset.iter().map(|bit| (bit / 64) as i64).collect();
@@ -44,7 +44,8 @@ impl PacketBuilder {
     }
 
     pub fn write_position(&mut self, x: i32, y: i32, z: i32) -> &mut Self {
-        let encoded_position: u64 = ((x as u64 & 0x3FFFFFF) << 38) | ((z as u64 & 0x3FFFFFF) << 12) | (y as u64 & 0xFFF);
+        let encoded_position: u64 =
+            ((x as u64 & 0x3FFFFFF) << 38) | ((z as u64 & 0x3FFFFFF) << 12) | (y as u64 & 0xFFF);
         self.buffer.put_u64(encoded_position);
         self
     }
@@ -56,8 +57,8 @@ impl PacketBuilder {
     pub fn write_string(&mut self, value: &str) -> &mut Self {
         let value_bytes = value.as_bytes();
         let length = value.len() as i32;
-        self.write_varint( length);
-        self.buffer.extend_from_slice(value_bytes); 
+        self.write_varint(length);
+        self.buffer.extend_from_slice(value_bytes);
         self
     }
 
@@ -66,7 +67,7 @@ impl PacketBuilder {
         self.buffer.put_u8(encoded_angle);
         self
     }
-    pub fn write_identifier(&mut self,identifier: String) -> &mut Self {
+    pub fn write_identifier(&mut self, identifier: String) -> &mut Self {
         let bytes = identifier.as_bytes();
         self.write_varint(bytes.len() as i32);
         self.buffer.extend_from_slice(bytes);
@@ -89,8 +90,8 @@ impl PacketBuilder {
     }
     pub fn write_byte_array(&mut self, value: &[u8]) -> &mut Self {
         let length = value.len() as i32;
-        self.write_varint(length); 
-        self.buffer.extend_from_slice(value); 
+        self.write_varint(length);
+        self.buffer.extend_from_slice(value);
         self
     }
     pub fn write_byte_array_no_length_prefixed(&mut self, value: &[u8]) -> &mut Self {
@@ -149,10 +150,10 @@ impl PacketBuilder {
     }
     pub fn write_varint(&mut self, mut value: i32) -> &mut Self {
         while (value & 0xFFFFFF80u32 as i32) != 0 {
-            self.buffer.put_u8((value as u8 & 0x7F) | 0x80); 
-            value >>= 7;                           
+            self.buffer.put_u8((value as u8 & 0x7F) | 0x80);
+            value >>= 7;
         }
-        self.buffer.put_u8(value as u8);                    
+        self.buffer.put_u8(value as u8);
         self
     }
     pub fn write_varlong(&mut self, mut value: i64) -> &mut Self {
@@ -164,7 +165,7 @@ impl PacketBuilder {
         self
     }
     pub fn write_long_be(&mut self, value: i64) -> &mut Self {
-        self.buffer.put_i64(value.to_be()); 
+        self.buffer.put_i64(value.to_be());
         self
     }
     pub fn write_byte(&mut self, value: u8) -> &mut Self {
@@ -176,7 +177,7 @@ impl PacketBuilder {
         self
     }
 
-     fn encode_varint(&self, mut value: i32) -> Vec<u8> {
+    fn encode_varint(&self, mut value: i32) -> Vec<u8> {
         let mut encoded_bytes = Vec::new();
         loop {
             if (value & !0x7F) == 0 {
@@ -191,21 +192,20 @@ impl PacketBuilder {
     }
     pub fn build(&mut self) -> BytesMut {
         let mut packet = BytesMut::new();
-        
+
         // Copiamos el buffer actual (que ya contiene el packet_id y los datos)
-        let packet_data = self.buffer.split();  // Split para extraer los datos actuales sin modificar self.buffer
-    
+        let packet_data = self.buffer.split(); // Split para extraer los datos actuales sin modificar self.buffer
+
         // Calculamos la longitud total (packet_id + datos del paquete)
         let total_length = packet_data.len() as i32;
-        
+
         // Escribimos la longitud total del paquete
         packet.put_slice(&self.encode_varint(total_length));
-        
+
         // Luego añadimos el contenido del paquete (packet_id y datos)
         packet.extend_from_slice(&packet_data);
         packet
     }
-    
 
     pub async fn send(&mut self, socket: &mut tokio::net::TcpStream) -> Result<(), String> {
         let packet = self.build();

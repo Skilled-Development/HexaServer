@@ -3,17 +3,19 @@ use std::{collections::HashMap, sync::Arc};
 use bytes::BytesMut;
 use hexa_protocol::{packets::server::handshake::status_response_packet, HandshakePacket};
 use hexa_protocol_base::TextComponent;
-use tokio::{io::AsyncWriteExt, net::TcpStream, sync::Mutex};
+use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
 
 use crate::{player::player_connection::ClientState, PlayerConnection};
 
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
-    socket: &mut TcpStream,
-    client: &mut PlayerConnection,
+    reader: &mut OwnedReadHalf,
+    client: Arc<Mutex<PlayerConnection>>,
     clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
 ) -> Result<(), String> {
+    let _ = reader;
+    let mut client = client.lock().await;
     if length > 3 {
         let handshake_packet = HandshakePacket::read_packet(buffer);
         client.set_protocol_version(handshake_packet.get_player_protocol());
@@ -86,9 +88,12 @@ pub async fn handle(
             max_player_count,
             sample_text,
         )
-        .build()
-        .send(socket)
-        .await;
+        .build();
+        /* .send(socket)
+        .await;*/
+        client
+            .send_packet_bytes(_status_response_packet.build())
+            .await;
     }
     Ok(())
 }

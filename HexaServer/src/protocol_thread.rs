@@ -1,14 +1,11 @@
 use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use bytes::{Buf, BufMut, BytesMut};
-use hexa_protocol::packets::server::play::update_section_blocks_packet::{
-    self, UpdateSectionBlocksPacket,
-};
-use hexa_protocol_base::{chunk::chunk_encoder_decoder::ChunkEncoderDecoder, PacketBuilder};
+use hexa_protocol_base::PacketBuilder;
 use rand::Rng;
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
-    net::{TcpListener, TcpStream},
+    io::AsyncReadExt,
+    net::{tcp::OwnedReadHalf, TcpListener},
     sync::Mutex,
 };
 
@@ -45,7 +42,7 @@ impl ProtocolThread {
         server_name: String,
         server_versions: Vec<i32>,
         server_config: Arc<std::sync::RwLock<ServerConfig>>,
-    ) -> ProtocolThread {
+    ) -> Self {
         let protocol_thread = ProtocolThread {
             port,
             address,
@@ -66,9 +63,8 @@ impl ProtocolThread {
         );
 
         loop {
-            let (mut socket, addr) = listener.accept().await.unwrap();
-            // Divide el TcpStream en un lector y un escritor
-            //let (mut reader, mut writer) = socket.split();
+            let (socket, addr) = listener.accept().await.unwrap();
+            let (reader, writer) = socket.into_split(); // Este produce `tokio::net::tcp::WriteHalf`
             let ip_address = addr.ip().to_string();
             let port = addr.port();
             println!("-------------------------------------");
@@ -78,8 +74,11 @@ impl ProtocolThread {
             let client = match client {
                 Some(client) => client,
                 None => {
-                    let client =
-                        Arc::new(Mutex::new(PlayerConnection::new(ip_address.clone(), port)));
+                    let client = Arc::new(Mutex::new(PlayerConnection::new(
+                        ip_address.clone(),
+                        port,
+                        writer,
+                    )));
                     self.clients
                         .lock()
                         .await
@@ -97,7 +96,7 @@ impl ProtocolThread {
             tokio::spawn({
                 let clients_clone = clients.clone(); /*Este clients_clone en cuestion */
                 async move {
-                    let result = Self::handle_client(socket, client, clients_clone).await;
+                    let result = Self::handle_client(reader, client, clients_clone).await;
                     if result.is_err() {
                         let mut clients_lock = clients.lock().await;
                         clients_lock.remove(&address);
@@ -109,13 +108,13 @@ impl ProtocolThread {
     }
 
     pub async fn handle_client(
-        mut socket: TcpStream,
+        mut reader: OwnedReadHalf,
         client: Arc<Mutex<PlayerConnection>>,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
     ) -> Result<(), String> {
         let mut buffer = BytesMut::with_capacity(1024);
         loop {
-            match socket.read_buf(&mut buffer).await {
+            match reader.read_buf(&mut buffer).await {
                 Ok(0) => {
                     return Err("error".to_string());
                 }
@@ -123,11 +122,10 @@ impl ProtocolThread {
                     while buffer.len() > 0 {
                         println!("===============================================");
                         let timer = Instant::now();
-                        let mut client_guard = client.lock().await;
                         match Self::process_packet(
                             &mut buffer,
-                            &mut socket,
-                            &mut client_guard,
+                            &mut reader,
+                            client.clone(),
                             clients.clone(),
                         )
                         .await
@@ -154,14 +152,14 @@ impl ProtocolThread {
 
     async fn process_packet(
         buffer: &mut BytesMut,
-        socket: &mut TcpStream,
-        client: &mut PlayerConnection,
+        reader: &mut OwnedReadHalf,
+        client: Arc<Mutex<PlayerConnection>>,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
     ) -> Result<(), String> {
         /*println!("Processing packet...");
         println!("Buffer: {:?}", buffer);*/
-        let client_state = client.client_state.clone();
-        //println!("Client state: {:?}", client_state);
+        let client_state = client.lock().await.client_state.clone();
+        println!("Client state: {:?}", client_state);
         if buffer.is_empty() {
             println!("Empty buffer");
             return Ok(());
@@ -193,17 +191,17 @@ impl ProtocolThread {
         println!("Packet ID: 0x{:X}", packet_id);*/
         let result: Result<(), String> = match client_state {
             ClientState::HANDSHAKE => {
-                Self::handshake_handler(packet_id, length, buffer, socket, client, clients).await
+                Self::handshake_handler(packet_id, length, buffer, reader, client, clients).await
             }
             ClientState::LOGIN => {
-                Self::login_handler(packet_id, length, buffer, socket, client, clients).await
+                Self::login_handler(packet_id, length, buffer, reader, client, clients).await
             }
             ClientState::CONFIGURATION => {
-                Self::configuration_handler(packet_id, length, buffer, socket, client, clients)
+                Self::configuration_handler(packet_id, length, buffer, reader, client, clients)
                     .await
             }
             ClientState::PLAY => {
-                Self::play_handler(packet_id, length, buffer, socket, client, clients).await
+                Self::play_handler(packet_id, length, buffer, reader, client, clients).await
             }
         };
         if result.is_err() {
@@ -217,7 +215,7 @@ impl ProtocolThread {
                 buffer.extend_from_slice(&temp_buffer);
                 buffer.extend_from_slice(&buffer_clone);
                 let mut readed_buffer = BytesMut::with_capacity(1024);
-                socket.read_buf(&mut readed_buffer).await.unwrap();
+                reader.read_buf(&mut readed_buffer).await.unwrap();
                 buffer.extend_from_slice(&readed_buffer);
                 return Ok(());
             }
@@ -229,41 +227,43 @@ impl ProtocolThread {
         packet_id: i32,
         length: i32,
         buffer: &mut BytesMut,
-        socket: &mut TcpStream,
-        client: &mut PlayerConnection,
+        reader: &mut OwnedReadHalf,
+        client: Arc<Mutex<PlayerConnection>>,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
     ) -> Result<(), String> {
         let _ = clients;
+
+        let client_clone = client.clone();
         let result_on_read = match packet_id {
-            0x00 => confirm_teletransportation::handle(length, socket, buffer, client).await,
+            0x00 => confirm_teletransportation::handle(length, reader, buffer, client).await,
             0x21 => ping_request_play::handle(length, buffer, client).await,
-            0x1A => set_player_position::handle(length, buffer, socket, client).await,
-            0x1B => set_player_position_and_rotation::handle(length, buffer, socket, client).await,
-            0x2F => set_item_held::handle(length, buffer, socket, client).await,
-            0x36 => swing_arm::handle(length, buffer, socket, client).await,
-            0x18 => keep_alive::handle(length, buffer, socket, client).await,
-            0x20 => pick_item::handle(length, buffer, socket, client).await,
+            0x1A => set_player_position::handle(length, buffer, reader, client).await,
+            0x1B => set_player_position_and_rotation::handle(length, buffer, reader, client).await,
+            0x2F => set_item_held::handle(length, buffer, reader, client).await,
+            0x36 => swing_arm::handle(length, buffer, reader, client).await,
+            0x18 => keep_alive::handle(length, buffer, reader, client).await,
+            0x20 => pick_item::handle(length, buffer, reader, client).await,
             _ => {
                 println!("Unknown packet ID: {} in play handler", packet_id);
                 buffer.clear();
-                socket.flush().await.unwrap();
                 return Err("Unknown packet ID".to_string());
             }
         };
-
+        let mut client_guard = client_clone.lock().await;
         if result_on_read.is_ok() {
-            let client_last_keep_alive = client.get_last_keep_alive();
+            let client_last_keep_alive = client_guard.get_last_keep_alive();
             if client_last_keep_alive.elapsed().as_millis() > 17000 {
-                println!("Client {} timed out", client.ip_address);
+                println!("Client {} timed out", client_guard.ip_address);
                 let mut keep_alive_packet = PacketBuilder::new(0x26);
                 let random_id: i64 = rand::thread_rng().gen();
                 keep_alive_packet.write_long_be(random_id);
-                keep_alive_packet.send(socket).await?;
-                client.set_keep_alive_id(random_id);
-                client.set_last_keep_alive(Instant::now());
+                client_guard.send_packet_builder(keep_alive_packet).await;
+                //keep_alive_packet.send(socket).await?;
+                client_guard.set_keep_alive_id(random_id);
+                client_guard.set_last_keep_alive(Instant::now());
                 println!(
                     "Sent keep alive packet to client {} with alive id {}",
-                    client.ip_address, random_id
+                    client_guard.ip_address, random_id
                 );
             }
         } else {
@@ -276,23 +276,23 @@ impl ProtocolThread {
         packet_id: i32,
         length: i32,
         buffer: &mut BytesMut,
-        socket: &mut TcpStream,
-        client: &mut PlayerConnection,
+        reader: &mut OwnedReadHalf,
+        client: Arc<Mutex<PlayerConnection>>,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
     ) -> Result<(), String> {
         let _ = clients;
 
         match packet_id {
-            0x00 => return client_information::handle(length, buffer, socket, client).await,
-            0x01 => return cookie_request::handle(length, buffer, socket, client).await,
+            0x00 => return client_information::handle(length, buffer, reader, client).await,
+            0x01 => return cookie_request::handle(length, buffer, reader, client).await,
             0x02 => {
-                return server_bound_configuration::handle(length, buffer, socket, client).await
+                return server_bound_configuration::handle(length, buffer, reader, client).await
             }
             0x03 => {
-                return aknowlodge_finish_configuration::handle(length, buffer, socket, client)
+                return aknowlodge_finish_configuration::handle(length, buffer, reader, client)
                     .await
             }
-            0x07 => return server_bound_known_packs::handle(length, buffer, socket, client).await,
+            0x07 => return server_bound_known_packs::handle(length, buffer, reader, client).await,
             _ => println!("Unknown packet ID: {} in configuration handler", packet_id),
         }
         Ok(())
@@ -302,14 +302,14 @@ impl ProtocolThread {
         packet_id: i32,
         length: i32,
         buffer: &mut BytesMut,
-        socket: &mut TcpStream,
-        client: &mut PlayerConnection,
+        reader: &mut OwnedReadHalf,
+        client: Arc<Mutex<PlayerConnection>>,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
     ) -> Result<(), String> {
         let _ = clients;
         match packet_id {
-            0x00 => return login_start::handle(length, buffer, socket, client).await,
-            0x03 => return login_acknowledgement::handle(length, buffer, socket, client).await,
+            0x00 => return login_start::handle(length, buffer, reader, client).await,
+            0x03 => return login_acknowledgement::handle(length, buffer, reader, client).await,
             _ => println!("Unknown packet ID: {} in login handler", packet_id),
         }
         Ok(())
@@ -318,15 +318,15 @@ impl ProtocolThread {
         packet_id: i32,
         length: i32,
         buffer: &mut BytesMut,
-        socket: &mut TcpStream,
-        client: &mut PlayerConnection,
+        reader: &mut OwnedReadHalf,
+        client: Arc<Mutex<PlayerConnection>>,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<PlayerConnection>>>>>,
     ) -> Result<(), String> {
         match packet_id {
             0x00 => {
-                return handshake::handle(length, buffer, socket, client, clients.clone()).await
+                return handshake::handle(length, buffer, reader, client, clients.clone()).await
             }
-            0x01 => return ping_request::handle(length, buffer, socket, client).await,
+            0x01 => return ping_request::handle(length, buffer, reader, client).await,
             _ => println!("Unknown packet ID: {} in handshake_handler", packet_id),
         }
         Ok(())

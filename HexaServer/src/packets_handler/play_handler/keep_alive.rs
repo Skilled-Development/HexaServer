@@ -1,16 +1,27 @@
+use std::sync::Arc;
+
 use bytes::{Buf, BytesMut};
 use hexa_protocol_base::PacketReader;
-use tokio::net::TcpStream;
+use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
 
 use crate::PlayerConnection;
 
-pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, client: &mut PlayerConnection) -> Result<(), String> {
-    let _ = socket;
-    let _ = client;
+pub async fn handle(
+    length: i32,
+    buffer: &mut BytesMut,
+    reader: &mut OwnedReadHalf,
+    client: Arc<Mutex<PlayerConnection>>,
+) -> Result<(), String> {
+    let client = client.lock().await;
+    let _ = reader;
     let _ = length;
     if buffer.remaining() < length as usize {
         println!("Not enough data to read set item held packet");
-        println!("Buffer remaining: {}, Length: {}", buffer.remaining(), length);
+        println!(
+            "Buffer remaining: {}, Length: {}",
+            buffer.remaining(),
+            length
+        );
         //buffer.clear();
         return Err("not_enough_data".to_string());
     }
@@ -18,7 +29,11 @@ pub async fn handle(length: i32, buffer: &mut BytesMut, socket: &mut TcpStream, 
     let alive_id = reader.read_long_be();
     if alive_id != client.get_keep_alive_id() {
         println!("Keep alive id is not the same as the last one");
-        println!("Received: {}, Player keep alive: {}", alive_id, client.get_keep_alive_id());
+        println!(
+            "Received: {}, Player keep alive: {}",
+            alive_id,
+            client.get_keep_alive_id()
+        );
         return Err("Keep alive id is not the same as the last one".to_string());
     }
     Ok(())

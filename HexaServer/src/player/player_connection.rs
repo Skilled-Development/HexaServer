@@ -1,13 +1,8 @@
 use std::sync::Arc;
 
+use bytes::BytesMut;
 use hexa_protocol_base::PacketBuilder;
-use tokio::{
-    io::AsyncWriteExt,
-    net::{
-        tcp::{OwnedWriteHalf, WriteHalf},
-        TcpStream,
-    },
-};
+use tokio::{io::AsyncWriteExt, net::tcp::OwnedWriteHalf, sync::Mutex};
 
 use crate::ServerConfig;
 
@@ -19,7 +14,7 @@ pub enum ClientState {
     PLAY,
 }
 
-pub struct PlayerConnection /*<'a> */ {
+pub struct PlayerConnection {
     pub id: Option<String>,
     pub name: Option<String>,
     pub ip_address: String,
@@ -32,11 +27,11 @@ pub struct PlayerConnection /*<'a> */ {
     pub last_keep_alive: Option<std::time::Instant>,
     pub keep_alive_id: Option<i64>,
     pub sended_blocks: bool,
-    //pub socket_writer: Option<WriteHalf<'a>>,
+    pub writer: Arc<Mutex<OwnedWriteHalf>>, // Ahora el writer está en un Arc<Mutex<>>
 }
 
-impl PlayerConnection /*<'a> */ {
-    pub fn new(ip: String, port: u16) -> PlayerConnection /*<'a> */ {
+impl PlayerConnection {
+    pub fn new(ip: String, port: u16, writer: OwnedWriteHalf) -> PlayerConnection {
         println!("Creating new connection with IP {}", ip);
         PlayerConnection {
             id: None,
@@ -51,11 +46,12 @@ impl PlayerConnection /*<'a> */ {
             last_keep_alive: None,
             keep_alive_id: None,
             sended_blocks: false,
-            //socket_writer: None,
+            writer: Arc::new(Mutex::new(writer)), // Envolver el writer en Arc<Mutex<>>
         }
     }
 
-    /*pub fn set_socket_writer(&mut self, writer: WriteHalf<'_>) {
+    /*
+    pub fn set_socket_writer(&mut self, writer: WriteHalf<'_>) {
         self.socket_writer = Some(writer);
     }*/
     pub fn is_send_blocks(&self) -> bool {
@@ -113,7 +109,16 @@ impl PlayerConnection /*<'a> */ {
         self.client_state
     }
 
-    /*pub fn send_async_packet(&mut self, packet: PacketBuilder) {
-        tokio::spawn(async move { self.socket_writer.unwrap().write_all(&packet.build()) });
-    }*/
+    pub async fn send_packet_bytes(&mut self, packet: BytesMut) {
+        self.writer.lock().await.write_all(&packet).await.unwrap();
+    }
+
+    pub async fn send_packet_builder(&mut self, mut packet: PacketBuilder) {
+        self.writer
+            .lock()
+            .await
+            .write_all(&packet.build())
+            .await
+            .unwrap();
+    }
 }
