@@ -15,8 +15,6 @@ pub async fn handle(
     let _ = reader;
     let _ = length;
     let client = client.lock().await;
-    let connection = client.get_connection();
-    let connection = connection.lock().await;
     if buffer.remaining() < length as usize {
         return Err("not_enough_data".to_string());
     }

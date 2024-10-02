@@ -4,7 +4,7 @@ use bytes::{Buf, BytesMut};
 use hexa_protocol::packets::client::play::set_player_position_packet::SetPlayerPositionPacket;
 use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
 
-use crate::{player::player::Player, PlayerConnection};
+use crate::player::player::Player;
 
 pub async fn handle(
     length: i32,
@@ -15,8 +15,6 @@ pub async fn handle(
     let _ = reader;
     let _ = length;
     let client = client.lock().await;
-    let connection: Arc<Mutex<PlayerConnection>> = client.get_connection();
-    let connection = connection.lock().await;
     if buffer.clone().remaining() < 24 as usize {
         return Err("not_enough_data".to_string());
     }

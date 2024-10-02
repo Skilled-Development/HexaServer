@@ -3,7 +3,6 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 use bytes::{Buf, BufMut, BytesMut};
 use hexa_protocol_base::PacketBuilder;
 use rand::Rng;
-use serde::de;
 use tokio::{
     io::AsyncReadExt,
     net::{tcp::OwnedReadHalf, TcpListener},
@@ -11,7 +10,6 @@ use tokio::{
 };
 
 use crate::{
-    entity::entity_processor,
     packets_handler::{
         configuration_handler::{
             aknowlodge_finish_configuration, client_information, cookie_request,
@@ -25,7 +23,7 @@ use crate::{
         },
     },
     player::{player::Player, player_connection::ClientState},
-    server_config, PlayerConnection, ServerConfig,
+    PlayerConnection, ServerConfig,
 };
 
 pub struct ProtocolThread {

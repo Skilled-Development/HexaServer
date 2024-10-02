@@ -1,10 +1,10 @@
-use tokio::{io::AsyncWriteExt, net::TcpStream, time::sleep};
-use bytes::{BytesMut, BufMut};
+use bytes::{BufMut, BytesMut};
 use std::time::{Duration, Instant};
+use tokio::{io::AsyncWriteExt, net::TcpStream, time::sleep};
 
 async fn send_handshake_packet(mut socket: TcpStream) {
     let mut packet = BytesMut::new();
-    
+
     // ID del paquete (Handshake)
     write_int(&mut packet, 0x00); // Packet ID
     write_int(&mut packet, 0); // Length (placeholder, can be updated based on actual data)
@@ -27,7 +27,7 @@ async fn send_handshake_packet(mut socket: TcpStream) {
 
 async fn simulate_connections(address: &str, port: u16, num_connections: usize) {
     let mut tasks = Vec::with_capacity(num_connections);
-    
+
     for _ in 0..num_connections {
         let address = address.to_string();
         let port = port;
@@ -36,14 +36,14 @@ async fn simulate_connections(address: &str, port: u16, num_connections: usize) 
                 Ok(socket) => {
                     println!("Conectado a {}:{}", address, port);
                     send_handshake_packet(socket).await;
-                },
+                }
                 Err(err) => {
                     println!("Error al conectar: {}", err);
                 }
             }
         }));
     }
-    
+
     // Esperar a que todas las tareas se completen
     for task in tasks {
         if let Err(err) = task.await {
@@ -56,7 +56,7 @@ fn write_int(buf: &mut BytesMut, value: i32) {
     buf.put_i32_le(value);
 }
 
-fn write_long(buf: &mut BytesMut, value: i64) {
+fn _write_long(buf: &mut BytesMut, value: i64) {
     buf.put_i64_le(value);
 }
 

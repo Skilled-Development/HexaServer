@@ -15,8 +15,6 @@ pub async fn handle(
         return Err("not_enough_data".to_string());
     }
     let client = client.lock().await;
-    let connection = client.get_connection();
-    let connection = connection.lock().await;
     let _packet = PingRequestPlayPacket::read_packet(buffer, client.get_protocol_version());
     Ok(())
 }

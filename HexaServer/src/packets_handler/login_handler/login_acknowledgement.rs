@@ -17,7 +17,7 @@ pub async fn handle(
 ) -> Result<(), String> {
     let _ = reader;
     let _ = length;
-    let mut client = client.lock().await;
+    let client = client.lock().await;
     let connection = client.get_connection();
     let mut connection = connection.lock().await;
     connection.set_client_state(ClientState::CONFIGURATION);
