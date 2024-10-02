@@ -55,12 +55,18 @@ pub async fn handle(
         let z = (packet_z * 4096.0 - last_pos.2 * 4096.0) as i16;
         update_packet.write_short(z);
         //yaw
-        update_packet.write_byte(packet_yaw as u8);
+        update_packet.write_angle(packet_yaw);
         //pitch
-        update_packet.write_byte(packet_pitch as u8);
+        update_packet.write_angle(packet_pitch);
         //on ground
         update_packet.write_boolean(packet_on_ground);
         let update_packet: BytesMut = update_packet.build();
+
+        let mut head_rotation = PacketBuilder::new(0x48);
+        head_rotation.write_varint(entity_id);
+        head_rotation.write_angle(packet_yaw);
+        let head_rotation: BytesMut = head_rotation.build();
+
         let clients = clients.lock().await; // Hacemos el lock una sola vez
         println!("Clients size: {}", clients.len());
 
@@ -71,6 +77,7 @@ pub async fn handle(
                 continue;
             }
             let update_packet_clone = update_packet.clone();
+            let head_rotation_clone = head_rotation.clone();
             let other_client = Arc::clone(other_client);
 
             let task = tokio::spawn(async move {
@@ -78,6 +85,7 @@ pub async fn handle(
                 let connection = other_client.get_connection();
                 let mut connection = connection.lock().await;
                 connection.send_packet_bytes(update_packet_clone).await;
+                connection.send_packet_bytes(head_rotation_clone).await;
             });
 
             tasks.push(task);

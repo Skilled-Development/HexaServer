@@ -19,9 +19,8 @@ pub struct Player {
     pub x: f64,
     pub y: f64,
     pub z: f64,
-    pub yaw: u8,
-    pub pitch: u8,
-    pub head_rotation: u8,
+    pub yaw: f32,
+    pub pitch: f32,
     pub on_ground: bool,
     pub protocol_version: i32,
     pub velocity: (i16, i16, i16),
@@ -48,9 +47,8 @@ impl Player {
             x: 0.0,
             y: 0.0,
             z: 0.0,
-            yaw: 0,
-            pitch: 0,
-            head_rotation: 0,
+            yaw: 0.0,
+            pitch: 0.0,
             on_ground: false,
             protocol_version: 0,
             velocity: (0, 0, 0),
@@ -135,21 +133,13 @@ impl Player {
         self.z = z;
     }
 
-    pub fn get_rotation(&self) -> (u8, u8) {
+    pub fn get_rotation(&self) -> (f32, f32) {
         (self.yaw, self.pitch)
     }
 
-    pub fn set_rotation(&mut self, yaw: u8, pitch: u8) {
+    pub fn set_rotation(&mut self, yaw: f32, pitch: f32) {
         self.yaw = yaw;
         self.pitch = pitch;
-    }
-
-    pub fn get_head_rotation(&self) -> u8 {
-        self.head_rotation
-    }
-
-    pub fn set_head_rotation(&mut self, head_rotation: u8) {
-        self.head_rotation = head_rotation;
     }
     pub fn is_on_ground(&self) -> bool {
         self.on_ground

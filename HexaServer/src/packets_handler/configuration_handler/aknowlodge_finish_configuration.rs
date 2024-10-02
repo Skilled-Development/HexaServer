@@ -105,20 +105,40 @@ pub async fn handle(
     synchronize_position.write_varint(0);
     connection.send_packet_builder(synchronize_position).await;
 
+    let mut info_update = PacketBuilder::new(0x3E);
+    info_update.write_byte(0x01);
+    info_update.write_varint(1);
+    info_update.write_uuid(client.get_uuid());
+    info_update.write_string(&client.get_name());
+    info_update.write_varint(0);
+
     //TODO: spawn player
     let mut spawn_player = PacketBuilder::new(0x01);
+    //entity id
     spawn_player.write_varint(entity_id);
+    //uuid
     spawn_player.write_uuid(client.get_uuid());
-    spawn_player.write_varint(122);
+    //entity type
+    spawn_player.write_varint(128);
+    //position x
     spawn_player.write_double(0.0);
+    //position y
     spawn_player.write_double(1000.0);
+    //position z
     spawn_player.write_double(0.0);
-    spawn_player.write_byte(0);
-    spawn_player.write_byte(0);
-    spawn_player.write_byte(0);
+    //rotation yaw
+    spawn_player.write_angle(0.0);
+    //rotation pitch
+    spawn_player.write_angle(0.0);
+    //head rotation
+    spawn_player.write_angle(0.0);
+    //data
     spawn_player.write_varint(0);
+    //velocity x
     spawn_player.write_short(0);
+    //velocity y
     spawn_player.write_short(0);
+    //velocity z
     spawn_player.write_short(0);
 
     {
@@ -132,18 +152,28 @@ pub async fn handle(
             let other_connection = other_client.get_connection();
             let mut other_connection = other_connection.lock().await;
             other_connection
+                .send_packet_builder(info_update.clone())
+                .await;
+            other_connection
                 .send_packet_builder(spawn_player.clone())
                 .await;
+            let mut info_update = PacketBuilder::new(0x3E);
+            info_update.write_byte(0x01);
+            info_update.write_varint(1);
+            info_update.write_uuid(other_client.get_uuid());
+            info_update.write_string(&other_client.get_name());
+            info_update.write_varint(0);
+            connection.send_packet_builder(info_update).await;
             let mut spawn_player = PacketBuilder::new(0x01);
             spawn_player.write_varint(other_client.get_entity_id());
             spawn_player.write_uuid(other_client.get_uuid());
-            spawn_player.write_varint(122);
+            spawn_player.write_varint(128);
             spawn_player.write_double(other_client.get_position().0);
             spawn_player.write_double(other_client.get_position().1);
             spawn_player.write_double(other_client.get_position().2);
-            spawn_player.write_byte(other_client.get_rotation().0);
-            spawn_player.write_byte(other_client.get_rotation().1);
-            spawn_player.write_byte(other_client.get_head_rotation());
+            spawn_player.write_angle(other_client.get_rotation().0);
+            spawn_player.write_angle(other_client.get_rotation().1);
+            spawn_player.write_angle(other_client.get_rotation().1);
             spawn_player.write_varint(0);
             spawn_player.write_short(other_client.get_velocity().0);
             spawn_player.write_short(other_client.get_velocity().1);

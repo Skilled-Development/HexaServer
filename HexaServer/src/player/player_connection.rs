@@ -20,11 +20,9 @@ pub enum ClientState {
 
 pub struct PlayerConnection {
     pub id: Option<String>,
-    pub name: Option<String>,
     pub ip_address: String,
     pub port: u16,
     pub client_state: ClientState,
-    pub username: Option<String>,
     pub server_config: Option<Arc<RwLock<ServerConfig>>>,
     pub last_keep_alive: Option<std::time::Instant>,
     pub keep_alive_id: Option<i64>,
@@ -37,11 +35,9 @@ impl PlayerConnection {
         println!("Creating new connection with IP {}", ip);
         PlayerConnection {
             id: None,
-            name: None,
             ip_address: ip,
             port,
             client_state: ClientState::HANDSHAKE,
-            username: None,
             server_config: None,
             last_keep_alive: None,
             keep_alive_id: None,
@@ -79,14 +75,6 @@ impl PlayerConnection {
 
     pub fn set_client_state(&mut self, client_state: ClientState) {
         self.client_state = client_state;
-    }
-
-    pub fn set_username(&mut self, username: String) {
-        self.username = Some(username);
-    }
-
-    pub fn get_username(&self) -> String {
-        self.username.clone().unwrap()
     }
 
     pub fn set_server_config(&mut self, server_config: Arc<RwLock<ServerConfig>>) {
