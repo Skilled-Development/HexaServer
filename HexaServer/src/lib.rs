@@ -38,8 +38,13 @@ pub mod entity {
     pub mod entity;
     pub mod entity_processor;
 }
+pub mod server {
+    pub mod server_process;
+}
 pub mod monitor;
 pub mod server_config;
+
+pub use server::server_process::ServerProcess;
 
 pub use hexa_server::HexaServer;
 pub use monitor::Monitor;

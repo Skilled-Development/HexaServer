@@ -1,7 +1,11 @@
-use crate::{Monitor, ProtocolThread};
+use crate::{Monitor, ProtocolThread, ServerProcess};
+use bytes::BytesMut;
 use hexa_protocol_base::ServerVersion;
 use std::{process, sync::Arc};
-use tokio::{runtime::Handle, sync::RwLock};
+use tokio::{
+    runtime::Handle,
+    sync::{mpsc, Mutex, RwLock},
+};
 
 pub struct HexaServer {
     server_config: Arc<RwLock<crate::ServerConfig>>,
@@ -57,24 +61,26 @@ impl HexaServer {
         println!("HexaServer is starting with {} versions...", versions.len());
 
         let versions_vector: Vec<i32> = versions.iter().map(|v| v.protocol()).collect();
-
+        let (tx, rx): (
+            mpsc::UnboundedSender<BytesMut>,
+            mpsc::UnboundedReceiver<BytesMut>,
+        ) = mpsc::unbounded_channel();
         let mut protocol_thread = ProtocolThread::new(
             server_config.server_port,
             server_config.server_ip.clone(),
             server_config.server_name.clone(),
             versions_vector,
             Arc::clone(&self.server_config),
+            tx,
         );
 
-        let protocol_handle = tokio::spawn(async move {
-            protocol_thread.start().await;
-        });
+        let mut server_process = ServerProcess {
+            packet_receiver: Arc::new(Mutex::new(rx)),
+            packets: Arc::new(Mutex::new(Vec::new())),
+        };
 
-        tokio::select! {
-            _ = protocol_handle => {
-                println!("Protocol thread has finished.");
-            }
-        }
+        // Ejecutar ambos en paralelo
+        tokio::join!(protocol_thread.start(), server_process.run(),);
 
         println!("HexaServer has stopped.");
     }

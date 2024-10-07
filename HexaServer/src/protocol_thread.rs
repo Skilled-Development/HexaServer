@@ -6,8 +6,9 @@ use rand::Rng;
 use tokio::{
     io::AsyncReadExt,
     net::{tcp::OwnedReadHalf, TcpListener},
-    sync::{Mutex, RwLock},
+    sync::{mpsc::UnboundedSender, Mutex, RwLock},
 };
+use uuid::Uuid;
 
 use crate::{
     packets_handler::{
@@ -33,6 +34,7 @@ pub struct ProtocolThread {
     pub server_name: String,
     pub server_versions: Vec<i32>,
     pub server_config: Arc<RwLock<ServerConfig>>,
+    pub packet_sender: UnboundedSender<BytesMut>,
 }
 
 impl ProtocolThread {
@@ -42,6 +44,7 @@ impl ProtocolThread {
         server_name: String,
         server_versions: Vec<i32>,
         server_config: Arc<RwLock<ServerConfig>>,
+        packet_sender: UnboundedSender<BytesMut>,
     ) -> Self {
         let protocol_thread = ProtocolThread {
             port,
@@ -50,6 +53,7 @@ impl ProtocolThread {
             server_name,
             server_versions,
             server_config,
+            packet_sender,
         };
         protocol_thread
     }
@@ -98,10 +102,11 @@ impl ProtocolThread {
                 .set_server_config(self.server_config.clone());
             let clients = self.clients.clone();
             let client_clone = client.clone();
+            let sender = self.packet_sender.clone();
             tokio::spawn({
                 let clients_clone = clients.clone();
                 async move {
-                    let result = Self::handle_client(reader, client, clients_clone).await;
+                    let result = Self::handle_client(sender, reader, client, clients_clone).await;
                     if result.is_err() {
                         let mut clients_lock = clients.lock().await;
                         let client_clone = client_clone.lock().await;
@@ -138,6 +143,7 @@ impl ProtocolThread {
     }
 
     pub async fn handle_client(
+        packet_sender: UnboundedSender<BytesMut>,
         mut reader: OwnedReadHalf,
         client: Arc<Mutex<Player>>,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
@@ -150,9 +156,9 @@ impl ProtocolThread {
                 }
                 Ok(_) => {
                     while buffer.len() > 0 {
-                        println!("===============================================");
                         let timer = Instant::now();
                         match Self::process_packet(
+                            packet_sender.clone(),
                             &mut buffer,
                             &mut reader,
                             client.clone(),
@@ -181,6 +187,7 @@ impl ProtocolThread {
     }
 
     async fn process_packet(
+        packet_sender: UnboundedSender<BytesMut>,
         buffer: &mut BytesMut,
         reader: &mut OwnedReadHalf,
         client: Arc<Mutex<Player>>,
@@ -197,9 +204,9 @@ impl ProtocolThread {
             )
         };
 
-        println!("Client state: {:?}", client_state);
+        /*println!("Client state: {:?}", client_state);
         println!("Entity ID: {:?}", entity_id);
-        println!("Connection ID: {:?}", connection_id);
+        println!("Connection ID: {:?}", connection_id);*/
         if buffer.is_empty() {
             println!("Empty buffer");
             return Ok(());
@@ -250,7 +257,16 @@ impl ProtocolThread {
                 .await
             }
             ClientState::PLAY => {
-                Self::play_handler(packet_id, length, buffer, reader, client.clone(), clients).await
+                Self::play_handler(
+                    packet_sender,
+                    packet_id,
+                    length,
+                    buffer,
+                    reader,
+                    client.clone(),
+                    clients,
+                )
+                .await
             }
         };
         if result.is_err() {
@@ -273,6 +289,7 @@ impl ProtocolThread {
     }
 
     pub async fn play_handler(
+        packet_sender: UnboundedSender<BytesMut>,
         packet_id: i32,
         length: i32,
         buffer: &mut BytesMut,
@@ -281,6 +298,9 @@ impl ProtocolThread {
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
         let client_clone = client.clone();
+        if let Err(e) = packet_sender.send(buffer.clone()) {
+            println!("Error sending packet to server process: {:?}", e);
+        }
         let result_on_read = match packet_id {
             0x00 => confirm_teletransportation::handle(length, reader, buffer, client).await,
             0x21 => ping_request_play::handle(length, buffer, client).await,
