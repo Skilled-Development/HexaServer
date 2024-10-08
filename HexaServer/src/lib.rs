@@ -11,6 +11,7 @@ pub mod packets_handler {
         pub mod set_item_held;
         pub mod set_player_position;
         pub mod set_player_position_and_rotation;
+        pub mod set_player_rotation;
         pub mod swing_arm;
     }
     pub mod handshake_handler {
@@ -40,6 +41,9 @@ pub mod entity {
 }
 pub mod server {
     pub mod server_process;
+}
+pub mod packet {
+    pub mod packet_buffer;
 }
 pub mod monitor;
 pub mod server_config;

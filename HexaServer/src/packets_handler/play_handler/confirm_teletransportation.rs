@@ -3,7 +3,6 @@ use std::sync::Arc;
 use bytes::{Buf, BytesMut};
 use hexa_protocol::packets::client::play::confirm_teleport_packet::ConfirmTeleportPacket;
 use hexa_protocol_base::PacketBuilder;
-use tokio::net::tcp::OwnedReadHalf;
 use tokio::sync::Mutex;
 use tokio::task;
 
@@ -15,11 +14,9 @@ unsafe impl Send for PlayerConnection {}
 
 pub async fn handle(
     length: i32,
-    reader: &mut OwnedReadHalf,
     buffer: &mut BytesMut,
     client: Arc<Mutex<Player>>,
 ) -> Result<(), String> {
-    let _ = reader;
     if buffer.remaining() < length as usize {
         return Err("not_enough_data".to_string());
     }
@@ -47,6 +44,7 @@ pub async fn handle(
         }
     });
     println!("Chunks sent");
+    println!("Teleport confirmed -----------------");
     Ok(())
 }
 async fn generate_chunk_data_packet(

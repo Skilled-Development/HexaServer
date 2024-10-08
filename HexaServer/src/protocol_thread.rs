@@ -1,16 +1,15 @@
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{collections::HashMap, sync::Arc};
 
 use bytes::{Buf, BufMut, BytesMut};
 use hexa_protocol_base::PacketBuilder;
-use rand::Rng;
 use tokio::{
     io::AsyncReadExt,
     net::{tcp::OwnedReadHalf, TcpListener},
     sync::{mpsc::UnboundedSender, Mutex, RwLock},
 };
-use uuid::Uuid;
 
 use crate::{
+    packet::packet_buffer::PacketBuffer,
     packets_handler::{
         configuration_handler::{
             aknowlodge_finish_configuration, client_information, cookie_request,
@@ -18,10 +17,6 @@ use crate::{
         },
         handshake_handler::{handshake, ping_request},
         login_handler::{login_acknowledgement, login_start},
-        play_handler::{
-            confirm_teletransportation, keep_alive, pick_item, ping_request_play, set_item_held,
-            set_player_position, set_player_position_and_rotation, swing_arm,
-        },
     },
     player::{player::Player, player_connection::ClientState},
     PlayerConnection, ServerConfig,
@@ -34,7 +29,7 @@ pub struct ProtocolThread {
     pub server_name: String,
     pub server_versions: Vec<i32>,
     pub server_config: Arc<RwLock<ServerConfig>>,
-    pub packet_sender: UnboundedSender<BytesMut>,
+    pub packet_sender: UnboundedSender<PacketBuffer>,
 }
 
 impl ProtocolThread {
@@ -44,7 +39,7 @@ impl ProtocolThread {
         server_name: String,
         server_versions: Vec<i32>,
         server_config: Arc<RwLock<ServerConfig>>,
-        packet_sender: UnboundedSender<BytesMut>,
+        packet_sender: UnboundedSender<PacketBuffer>,
     ) -> Self {
         let protocol_thread = ProtocolThread {
             port,
@@ -143,12 +138,12 @@ impl ProtocolThread {
     }
 
     pub async fn handle_client(
-        packet_sender: UnboundedSender<BytesMut>,
+        packet_sender: UnboundedSender<PacketBuffer>,
         mut reader: OwnedReadHalf,
         client: Arc<Mutex<Player>>,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
-        let mut buffer = BytesMut::with_capacity(1024);
+        let mut buffer = BytesMut::with_capacity(8192);
         loop {
             match reader.read_buf(&mut buffer).await {
                 Ok(0) => {
@@ -156,7 +151,6 @@ impl ProtocolThread {
                 }
                 Ok(_) => {
                     while buffer.len() > 0 {
-                        let timer = Instant::now();
                         match Self::process_packet(
                             packet_sender.clone(),
                             &mut buffer,
@@ -167,8 +161,6 @@ impl ProtocolThread {
                         .await
                         {
                             Ok(_) => {
-                                println!("Packet processed in {} us", timer.elapsed().as_micros());
-                                println!("Buffer after processing: {:?}", buffer);
                                 continue;
                             }
                             Err(e) => {
@@ -187,26 +179,18 @@ impl ProtocolThread {
     }
 
     async fn process_packet(
-        packet_sender: UnboundedSender<BytesMut>,
+        packet_sender: UnboundedSender<PacketBuffer>,
         buffer: &mut BytesMut,
         reader: &mut OwnedReadHalf,
         client: Arc<Mutex<Player>>,
         clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
-        let (client_state, entity_id, connection_id) = {
+        let client_state = {
             let real_client = client.lock().await;
             let connection = real_client.get_connection();
             let connection = connection.lock().await;
-            (
-                connection.get_client_state(),
-                real_client.get_entity_id(),
-                connection.get_connection_id(),
-            )
+            connection.get_client_state()
         };
-
-        /*println!("Client state: {:?}", client_state);
-        println!("Entity ID: {:?}", entity_id);
-        println!("Connection ID: {:?}", connection_id);*/
         if buffer.is_empty() {
             println!("Empty buffer");
             return Ok(());
@@ -233,17 +217,13 @@ impl ProtocolThread {
                 return Ok(());
             }
         };
-
-        /*println!("Packet ID: {}", packet_id);
-        println!("Packet ID: 0x{:X}", packet_id);*/
         let result: Result<(), String> = match client_state {
             ClientState::HANDSHAKE => {
                 Self::handshake_handler(packet_id, length, buffer, reader, client.clone(), clients)
                     .await
             }
             ClientState::LOGIN => {
-                Self::login_handler(packet_id, length, buffer, reader, client.clone(), clients)
-                    .await
+                Self::login_handler(packet_id, length, buffer, reader, client.clone()).await
             }
             ClientState::CONFIGURATION => {
                 Self::configuration_handler(
@@ -257,16 +237,7 @@ impl ProtocolThread {
                 .await
             }
             ClientState::PLAY => {
-                Self::play_handler(
-                    packet_sender,
-                    packet_id,
-                    length,
-                    buffer,
-                    reader,
-                    client.clone(),
-                    clients,
-                )
-                .await
+                Self::play_handler(packet_sender, packet_id, length, buffer, client.clone()).await
             }
         };
         if result.is_err() {
@@ -289,59 +260,35 @@ impl ProtocolThread {
     }
 
     pub async fn play_handler(
-        packet_sender: UnboundedSender<BytesMut>,
+        packet_sender: UnboundedSender<PacketBuffer>,
         packet_id: i32,
         length: i32,
         buffer: &mut BytesMut,
-        reader: &mut OwnedReadHalf,
         client: Arc<Mutex<Player>>,
-        clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
         let client_clone = client.clone();
-        if let Err(e) = packet_sender.send(buffer.clone()) {
+        let packet_data_length = (length as usize) - varint_length(packet_id);
+        let buffer_len = buffer.len();
+
+        if packet_data_length > buffer_len {
+            return Err("not_enough_data".to_string());
+        }
+
+        // Clonar los datos relevantes del buffer para enviarlo a través de packet_sender
+        let packet_data = buffer.clone().split_to(packet_data_length as usize);
+        let packet_buffer = PacketBuffer::new(
+            packet_data,
+            packet_id,
+            packet_data_length.try_into().unwrap(),
+            client_clone.clone(),
+        );
+
+        // Enviar el paquete a través de packet_sender
+        if let Err(e) = packet_sender.send(packet_buffer) {
             println!("Error sending packet to server process: {:?}", e);
+            return Err("Failed to send packet".to_string());
         }
-        let result_on_read = match packet_id {
-            0x00 => confirm_teletransportation::handle(length, reader, buffer, client).await,
-            0x21 => ping_request_play::handle(length, buffer, client).await,
-            0x1A => set_player_position::handle(length, buffer, reader, client).await,
-            0x1B => {
-                set_player_position_and_rotation::handle(length, buffer, reader, client, clients)
-                    .await
-            }
-            0x2F => set_item_held::handle(length, buffer, reader, client).await,
-            0x36 => swing_arm::handle(length, buffer, reader, client).await,
-            0x18 => keep_alive::handle(length, buffer, reader, client).await,
-            0x20 => pick_item::handle(length, buffer, reader, client).await,
-            _ => {
-                println!("Unknown packet ID: {} in play handler", packet_id);
-                buffer.clear();
-                return Err("Unknown packet ID".to_string());
-            }
-        };
-        let client_guard = client_clone.lock().await;
-        let connection_guard = client_guard.get_connection();
-        let mut connection_guard = connection_guard.lock().await;
-        if result_on_read.is_ok() {
-            let client_last_keep_alive = connection_guard.get_last_keep_alive();
-            if client_last_keep_alive.elapsed().as_millis() > 17000 {
-                println!("Client {} timed out", connection_guard.ip_address);
-                let mut keep_alive_packet = PacketBuilder::new(0x26);
-                let random_id: i64 = rand::thread_rng().gen();
-                keep_alive_packet.write_long_be(random_id);
-                connection_guard
-                    .send_packet_builder(keep_alive_packet)
-                    .await;
-                connection_guard.set_keep_alive_id(random_id);
-                connection_guard.set_last_keep_alive(Instant::now());
-                println!(
-                    "Sent keep alive packet to client {} with alive id {}",
-                    connection_guard.ip_address, random_id
-                );
-            }
-        } else {
-            return result_on_read;
-        }
+        buffer.clear();
         Ok(())
     }
 
@@ -377,9 +324,7 @@ impl ProtocolThread {
         buffer: &mut BytesMut,
         reader: &mut OwnedReadHalf,
         client: Arc<Mutex<Player>>,
-        clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
     ) -> Result<(), String> {
-        let _ = clients;
         match packet_id {
             0x00 => return login_start::handle(length, buffer, reader, client).await,
             0x03 => return login_acknowledgement::handle(length, buffer, reader, client).await,
@@ -438,4 +383,30 @@ pub fn write_varint(buffer: &mut BytesMut, mut value: i32) -> &mut BytesMut {
     }
     buffer.put_u8(value as u8);
     buffer
+}
+pub fn trim_zeros(buffer: &mut BytesMut) {
+    // Encuentra el índice del primer byte no nulo
+    let start = buffer.iter().position(|&x| x != 0).unwrap_or(0);
+    // Encuentra el índice del último byte no nulo
+    let end = buffer
+        .iter()
+        .rposition(|&x| x != 0)
+        .unwrap_or(buffer.len() - 1);
+
+    // Recorta el buffer a la parte no vacía
+    let trimmed = buffer.split_off(start);
+    buffer.clear();
+    buffer.extend_from_slice(&trimmed[..=end - start]);
+}
+fn varint_length(mut value: i32) -> usize {
+    let mut length = 0;
+
+    // Mientras haya más bits que procesar, agregamos otro byte.
+    while (value & !0x7F) != 0 {
+        length += 1;
+        value >>= 7;
+    }
+
+    // Contar el último byte
+    length + 1
 }

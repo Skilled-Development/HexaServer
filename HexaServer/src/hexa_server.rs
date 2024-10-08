@@ -1,5 +1,4 @@
-use crate::{Monitor, ProtocolThread, ServerProcess};
-use bytes::BytesMut;
+use crate::{packet::packet_buffer::PacketBuffer, Monitor, ProtocolThread, ServerProcess};
 use hexa_protocol_base::ServerVersion;
 use std::{process, sync::Arc};
 use tokio::{
@@ -62,8 +61,8 @@ impl HexaServer {
 
         let versions_vector: Vec<i32> = versions.iter().map(|v| v.protocol()).collect();
         let (tx, rx): (
-            mpsc::UnboundedSender<BytesMut>,
-            mpsc::UnboundedReceiver<BytesMut>,
+            mpsc::UnboundedSender<PacketBuffer>,
+            mpsc::UnboundedReceiver<PacketBuffer>,
         ) = mpsc::unbounded_channel();
         let mut protocol_thread = ProtocolThread::new(
             server_config.server_port,
@@ -74,10 +73,8 @@ impl HexaServer {
             tx,
         );
 
-        let mut server_process = ServerProcess {
-            packet_receiver: Arc::new(Mutex::new(rx)),
-            packets: Arc::new(Mutex::new(Vec::new())),
-        };
+        let server_process =
+            ServerProcess::new(Arc::new(Mutex::new(rx)), Arc::clone(&self.server_config));
 
         // Ejecutar ambos en paralelo
         tokio::join!(protocol_thread.start(), server_process.run(),);

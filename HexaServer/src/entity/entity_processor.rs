@@ -1,5 +1,7 @@
 use tokio::sync::Mutex;
 
+use crate::Player;
+
 use super::entity::Entity;
 use std::{collections::HashMap, sync::Arc};
 
@@ -25,5 +27,23 @@ impl EntityProcessor {
     }
     pub fn process(&self) {
         println!("Processing entity");
+    }
+    pub fn get_entities(&self) -> Arc<Mutex<HashMap<i32, Arc<Mutex<dyn Entity>>>>> {
+        Arc::clone(&self.entities)
+    }
+    pub async fn get_clients(&self) -> Arc<Mutex<HashMap<i32, Arc<Mutex<dyn Entity>>>>> {
+        let player_entities = self.entities.lock().await;
+        let mut clients = HashMap::new();
+
+        for (id, entity) in player_entities.iter() {
+            // Intentar hacer downcast a Player
+            let entity_guard = entity.lock().await; // Asegúrate de manejar posibles errores de bloqueo.
+            if let Some(_player) = entity_guard.as_any().downcast_ref::<Player>() {
+                // Si es un Player, lo insertamos en el HashMap
+                clients.insert(*id, Arc::clone(entity));
+            }
+        }
+
+        Arc::new(Mutex::new(clients))
     }
 }

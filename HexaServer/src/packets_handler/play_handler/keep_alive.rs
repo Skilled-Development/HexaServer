@@ -2,20 +2,18 @@ use std::sync::Arc;
 
 use bytes::{Buf, BytesMut};
 use hexa_protocol_base::PacketReader;
-use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
+use tokio::sync::Mutex;
 
 use crate::player::player::Player;
 
 pub async fn handle(
     length: i32,
     buffer: &mut BytesMut,
-    reader: &mut OwnedReadHalf,
     client: Arc<Mutex<Player>>,
 ) -> Result<(), String> {
     let client = client.lock().await;
     let connection = client.get_connection();
     let connection = connection.lock().await;
-    let _ = reader;
     let _ = length;
     if buffer.remaining() < length as usize {
         println!("Not enough data to read set item held packet");

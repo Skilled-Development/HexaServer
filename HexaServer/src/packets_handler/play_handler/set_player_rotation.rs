@@ -1,11 +1,10 @@
 use std::sync::Arc;
 
-use bytes::{Buf, BytesMut};
-use hexa_protocol::packets::client::play::set_player_position_packet::SetPlayerPositionPacket;
-use hexa_protocol_base::PacketBuilder;
+use bytes::BytesMut;
+use hexa_protocol_base::{PacketBuilder, PacketReader};
 use tokio::sync::Mutex;
 
-use crate::{player::player::Player, ServerProcess};
+use crate::{Player, ServerProcess};
 
 pub async fn handle(
     length: i32,
@@ -15,20 +14,22 @@ pub async fn handle(
 ) -> Result<(), String> {
     let _ = length;
 
-    let mut player: tokio::sync::MutexGuard<'_, Player> = client.lock().await;
-    if buffer.clone().remaining() < 24 as usize {
-        return Err("not_enough_data".to_string());
-    }
-    let last_pos = player.get_position();
-    let packet = SetPlayerPositionPacket::read_packet(buffer, player.get_protocol_version());
+    let mut player = client.lock().await;
+    let mut packet = PacketReader::new(buffer);
+    let yaw = packet.read_float();
+    let pitch = packet.read_float();
+    let on_ground = packet.read_boolean();
+    player.set_rotation(yaw, pitch);
+    player.set_on_ground(on_ground);
     let entity_id = player.get_entity_id();
-    let packet_x = packet.get_x();
-    let packet_y = packet.get_y();
-    let packet_z = packet.get_z();
-    let yaw = player.get_rotation().0;
-    let pitch = player.get_rotation().1;
-    let on_ground = packet.get_on_ground();
 
+    let last_pos = player.get_position();
+    let packet_x = last_pos.0;
+    let packet_y = last_pos.1;
+    let packet_z = last_pos.2;
+    let packet_yaw = yaw;
+    let packet_pitch = pitch;
+    let packet_on_ground = on_ground;
     let mut update_packet = PacketBuilder::new(0x2F);
     update_packet.write_varint(entity_id);
     let x = (packet_x * 4096.0 - last_pos.0 * 4096.0) as i16;
@@ -37,9 +38,9 @@ pub async fn handle(
     update_packet.write_short(y);
     let z = (packet_z * 4096.0 - last_pos.2 * 4096.0) as i16;
     update_packet.write_short(z);
-    update_packet.write_angle(yaw);
-    update_packet.write_angle(pitch);
-    update_packet.write_boolean(on_ground);
+    update_packet.write_angle(packet_yaw);
+    update_packet.write_angle(packet_pitch);
+    update_packet.write_boolean(packet_on_ground);
     let client_clone = Arc::clone(&client);
     server_process
         .broadcast_packet_except(client_clone, update_packet)
@@ -53,7 +54,5 @@ pub async fn handle(
         .broadcast_packet_except(client_clone, head_rotation)
         .await;
 
-    player.set_position(packet_x, packet_y, packet_z);
-    player.set_on_ground(on_ground);
     Ok(())
 }

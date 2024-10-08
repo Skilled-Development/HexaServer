@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{any::Any, sync::Arc};
 
 use tokio::sync::Mutex;
 
@@ -28,7 +28,11 @@ pub struct Player {
 
 impl Entity for Player {
     fn get_id(&self) -> i32 {
-        0
+        self.entity_id
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
     }
 }
 

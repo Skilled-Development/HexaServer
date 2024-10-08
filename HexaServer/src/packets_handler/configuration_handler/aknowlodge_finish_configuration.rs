@@ -3,7 +3,6 @@ use std::{collections::HashMap, sync::Arc, time::Instant};
 use bytes::BytesMut;
 use hexa_protocol_base::{packet_builder::PacketElement, PacketBuilder};
 use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
-use uuid::Uuid;
 extern crate byteorder;
 extern crate rand;
 extern crate rsa;
