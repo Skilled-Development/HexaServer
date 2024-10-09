@@ -307,10 +307,8 @@ impl ProtocolThread {
                 return server_bound_configuration::handle(length, buffer, reader, client).await
             }
             0x03 => {
-                return aknowlodge_finish_configuration::handle(
-                    length, buffer, reader, client, clients,
-                )
-                .await
+                return aknowlodge_finish_configuration::handle(buffer, reader, client, clients)
+                    .await
             }
             0x07 => return server_bound_known_packs::handle(length, buffer, reader, client).await,
             _ => println!("Unknown packet ID: {} in configuration handler", packet_id),

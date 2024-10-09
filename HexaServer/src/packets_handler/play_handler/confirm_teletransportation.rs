@@ -12,14 +12,7 @@ use crate::PlayerConnection;
 // Ensure PlayerConnection implements Send
 unsafe impl Send for PlayerConnection {}
 
-pub async fn handle(
-    length: i32,
-    buffer: &mut BytesMut,
-    client: Arc<Mutex<Player>>,
-) -> Result<(), String> {
-    if buffer.remaining() < length as usize {
-        return Err("not_enough_data".to_string());
-    }
+pub async fn handle(buffer: &mut BytesMut, client: Arc<Mutex<Player>>) -> Result<(), String> {
     println!("Confirm teleport packet received");
     let real_client = client.lock().await;
     let connection = real_client.get_connection();

@@ -7,13 +7,10 @@ use tokio::sync::Mutex;
 use crate::{Player, ServerProcess};
 
 pub async fn handle(
-    length: i32,
     buffer: &mut BytesMut,
     client: Arc<Mutex<Player>>,
     server_process: &ServerProcess,
 ) -> Result<(), String> {
-    let _ = length;
-
     let mut player = client.lock().await;
     let mut packet = PacketReader::new(buffer);
     let yaw = packet.read_float();

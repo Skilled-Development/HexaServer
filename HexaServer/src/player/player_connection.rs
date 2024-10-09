@@ -24,8 +24,6 @@ pub struct PlayerConnection {
     pub port: u16,
     pub client_state: ClientState,
     pub server_config: Option<Arc<RwLock<ServerConfig>>>,
-    pub last_keep_alive: Option<std::time::Instant>,
-    pub keep_alive_id: Option<i64>,
     pub sended_blocks: bool,
     pub writer: Arc<Mutex<OwnedWriteHalf>>, // Ahora el writer está en un Arc<Mutex<>>
 }
@@ -39,8 +37,6 @@ impl PlayerConnection {
             port,
             client_state: ClientState::HANDSHAKE,
             server_config: None,
-            last_keep_alive: None,
-            keep_alive_id: None,
             sended_blocks: false,
             writer: Arc::new(Mutex::new(writer)), // Envolver el writer en Arc<Mutex<>>
         }
@@ -58,19 +54,6 @@ impl PlayerConnection {
     }
     pub fn set_send_blocks(&mut self, sended_blocks: bool) {
         self.sended_blocks = sended_blocks;
-    }
-
-    pub fn set_last_keep_alive(&mut self, last_keep_alive: std::time::Instant) {
-        self.last_keep_alive = Some(last_keep_alive);
-    }
-    pub fn set_keep_alive_id(&mut self, keep_alive_id: i64) {
-        self.keep_alive_id = Some(keep_alive_id);
-    }
-    pub fn get_keep_alive_id(&self) -> i64 {
-        self.keep_alive_id.clone().unwrap()
-    }
-    pub fn get_last_keep_alive(&self) -> std::time::Instant {
-        self.last_keep_alive.clone().unwrap()
     }
 
     pub fn set_client_state(&mut self, client_state: ClientState) {

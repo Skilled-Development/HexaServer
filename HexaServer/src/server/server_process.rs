@@ -1,3 +1,4 @@
+use bytes::Buf;
 use crab_nbt::{Nbt, NbtCompound};
 use hexa_protocol_base::PacketBuilder;
 use rand::Rng;
@@ -20,8 +21,9 @@ pub struct ServerProcess {
     pub packet_receiver: Arc<Mutex<UnboundedReceiver<PacketBuffer>>>,
     pub packets: Arc<Mutex<Vec<PacketBuffer>>>,
     pub server_config: Arc<RwLock<ServerConfig>>,
-    pub broadcast_packets_flag: bool,
     pub broadcast_packet_map: HashMap<Arc<Mutex<Player>>, Vec<PacketBuilder>>,
+    pub tick_number: i32,
+    pub mspt_list: Vec<f64>,
 }
 
 impl ServerProcess {
@@ -33,125 +35,129 @@ impl ServerProcess {
             packet_receiver,
             packets: Arc::new(Mutex::new(Vec::new())),
             server_config,
-            broadcast_packets_flag: false,
             broadcast_packet_map: HashMap::new(),
+            tick_number: 0,
+            mspt_list: Vec::new(),
         }
     }
 
     pub async fn run(mut self) {
-        // Clonamos el Arc para el acceso a la lista de paquetes
-        let _packets = Arc::clone(&self.packets);
-        let packet_receiver = Arc::clone(&self.packet_receiver);
-
-        self.start_packet_receiver(packet_receiver).await;
+        self.start_packet_receiver().await;
         loop {
-            let start = std::time::Instant::now();
+            let start = Instant::now();
 
             // Procesamos los paquetes
-            let _ = self.process_packets().await;
-            self.broadcast_packets_flag = true;
+            if let Err(e) = self.process_packets().await {
+                eprintln!("Error procesando paquetes: {:?}", e);
+            }
             // Calculamos el tiempo transcurrido
             let elapsed = start.elapsed();
-            //println!("Elapsed: {:?}", elapsed);
-            self.broadcast_message(format!("Time elapsed: {}", elapsed.as_micros().to_string()))
-                .await;
+            self.mspt_list.push(elapsed.as_secs_f64() * 1000.0);
 
-            // Esperamos el tiempo restante del tick, asegurando que sean 50ms
+            // Cada 20 ticks, calculamos el TPS y lo transmitimos
+            if self.tick_number == 19 {
+                self.tick_number = 0;
+                self.broadcast_mspt_and_tps().await;
+            } else {
+                self.tick_number += 1;
+            }
+            // Dormimos lo que queda de los 50ms de cada tick
             let remaining_time = Duration::from_millis(50).saturating_sub(elapsed);
-            if remaining_time > Duration::ZERO {
+            if !remaining_time.is_zero() {
                 tokio::time::sleep(remaining_time).await;
             }
         }
     }
 
-    async fn start_packet_receiver(
-        &self,
-        packet_receiver: Arc<Mutex<UnboundedReceiver<PacketBuffer>>>,
-    ) {
-        // Clonamos el Arc para moverlo al futuro
+    async fn start_packet_receiver(&mut self) {
+        let packet_receiver = Arc::clone(&self.packet_receiver);
         let packets = Arc::clone(&self.packets);
-
         tokio::spawn(async move {
-            // Debemos bloquear el Mutex para obtener el receiver
             let mut receiver = packet_receiver.lock().await;
-
             while let Some(packet) = receiver.recv().await {
-                let mut packets = packets.lock().await;
-                packets.push(packet);
+                packets.lock().await.push(packet);
             }
         });
     }
 
     pub async fn process_packets(&self) -> Result<(), String> {
-        let mut packets = self.packets.lock().await;
+        let packets = Arc::clone(&self.packets);
+        let mut packets = packets.lock().await;
 
         if packets.is_empty() {
             return Ok(());
         }
 
-        // Liberar el lock antes del procesamiento de paquetes
         let packets_to_process = std::mem::take(&mut *packets);
+        drop(packets);
 
-        for mut packet in packets_to_process {
-            let packet_id = packet.get_packet_id();
-            let length = packet.get_packet_length();
-            let client = Arc::clone(&packet.get_client());
-            let buffer = packet.get_mut_buffer();
-
-            // Desbloquear el buffer antes de procesar
-            let result_on_read = match packet_id {
-                0x00 => confirm_teletransportation::handle(length, buffer, client.clone()).await,
-                0x21 => ping_request_play::handle(length, buffer, client.clone()).await,
-                0x1A => set_player_position::handle(length, buffer, client.clone(), self).await,
-                0x1B => {
-                    set_player_position_and_rotation::handle(length, buffer, client.clone(), self)
-                        .await
-                }
-                0x36 => swing_arm::handle(length, buffer, client.clone(), self).await,
-                0x18 => keep_alive::handle(length, buffer, client.clone()).await,
-                0x1c => set_player_rotation::handle(length, buffer, client.clone(), self).await,
-                /*0x2F => set_item_held::handle(length, buffer, reader, client.clone()).await,
-
-
-                0x20 => pick_item::handle(length, buffer, reader, client.clone()).await,*/
-                _ => {
-                    println!("Unknown packet ID: 0x{:x} in play handler", packet_id);
-                    buffer.clear();
-                    continue;
-                }
-            };
-
-            // Solo bloquear cuando sea necesario
-            if let Ok(_) = result_on_read {
-                let client_guard = client.lock().await;
-                let connection = client_guard.get_connection();
-                let mut connection_guard = connection.lock().await;
-
-                let client_last_keep_alive = connection_guard.get_last_keep_alive();
-                if client_last_keep_alive.elapsed().as_millis() > 17000 {
-                    println!("Client {} timed out", connection_guard.ip_address);
-
-                    let mut keep_alive_packet = PacketBuilder::new(0x26);
-                    let random_id: i64 = rand::thread_rng().gen();
-                    keep_alive_packet.write_long_be(random_id);
-
-                    connection_guard
-                        .send_packet_builder(keep_alive_packet)
-                        .await;
-                    connection_guard.set_keep_alive_id(random_id);
-                    connection_guard.set_last_keep_alive(Instant::now().into());
-
-                    println!(
-                        "Sent keep alive packet to client {} with alive id {}",
-                        connection_guard.ip_address, random_id
-                    );
-                }
-            } else {
-                return result_on_read; // Devolver el error si alguna lectura falla
-            }
+        let mut futures = vec![];
+        for packet in packets_to_process {
+            futures.push(self.handle_packet(packet));
         }
 
+        futures::future::join_all(futures).await;
+
         Ok(())
+    }
+
+    async fn handle_packet(&self, mut packet: PacketBuffer) -> Result<(), String> {
+        let packet_id = packet.get_packet_id();
+        let length = packet.get_packet_length();
+        let client = Arc::clone(&packet.get_client());
+        let buffer = packet.get_mut_buffer();
+        if buffer.remaining() < length as usize {
+            return Err("not_enough_data".to_string());
+        }
+        let _ = length;
+        let result_on_read = match packet_id {
+            0x00 => confirm_teletransportation::handle(buffer, client.clone()).await,
+            0x21 => ping_request_play::handle(buffer, client.clone()).await,
+            0x1A => set_player_position::handle(buffer, client.clone(), self).await,
+            0x1B => set_player_position_and_rotation::handle(buffer, client.clone(), self).await,
+            0x36 => swing_arm::handle(buffer, client.clone(), self).await,
+            0x18 => keep_alive::handle(buffer, client.clone()).await,
+            0x1C => set_player_rotation::handle(buffer, client.clone(), self).await,
+            _ => {
+                println!("Unknown packet ID: 0x{:x}", packet_id);
+                buffer.clear();
+                return Ok(());
+            }
+        };
+
+        if result_on_read.is_err() {
+            return result_on_read;
+        }
+
+        self.handle_keep_alive(client).await;
+        Ok(())
+    }
+
+    async fn handle_keep_alive(&self, client: Arc<Mutex<Player>>) {
+        let mut client_guard = client.lock().await;
+        if client_guard.get_last_keep_alive().elapsed().as_millis() > 17000 {
+            let connection = client_guard.get_connection();
+            let mut connection_guard = connection.lock().await;
+
+            let mut keep_alive_packet = PacketBuilder::new(0x26);
+            let random_id: i64 = rand::thread_rng().gen();
+            keep_alive_packet.write_long_be(random_id);
+
+            connection_guard
+                .send_packet_builder(keep_alive_packet)
+                .await;
+            client_guard.set_keep_alive_id(random_id);
+            client_guard.set_last_keep_alive(Instant::now().into());
+        }
+    }
+
+    pub async fn broadcast_mspt_and_tps(&mut self) {
+        let median_mspt = self.mspt_list.iter().sum::<f64>() / self.mspt_list.len() as f64;
+        let tps = 1000.0 / median_mspt;
+        let message = format!("MSPT: {:.4}ms TPS: {:.2}", median_mspt, tps);
+
+        self.broadcast_message(message).await;
+        self.mspt_list.clear();
     }
 
     pub async fn broadcast_message(&self, message: String) {

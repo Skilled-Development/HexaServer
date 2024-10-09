@@ -24,6 +24,8 @@ pub struct Player {
     pub on_ground: bool,
     pub protocol_version: i32,
     pub velocity: (i16, i16, i16),
+    pub last_keep_alive: Option<std::time::Instant>,
+    pub keep_alive_id: Option<i64>,
 }
 
 impl Entity for Player {
@@ -56,6 +58,8 @@ impl Player {
             on_ground: false,
             protocol_version: 0,
             velocity: (0, 0, 0),
+            last_keep_alive: None,
+            keep_alive_id: None,
         }
     }
 
@@ -172,5 +176,18 @@ impl Player {
     pub async fn get_connection_id(&self) -> String {
         let connection = self.connection.lock().await;
         connection.get_connection_id()
+    }
+
+    pub fn set_last_keep_alive(&mut self, last_keep_alive: std::time::Instant) {
+        self.last_keep_alive = Some(last_keep_alive);
+    }
+    pub fn set_keep_alive_id(&mut self, keep_alive_id: i64) {
+        self.keep_alive_id = Some(keep_alive_id);
+    }
+    pub fn get_keep_alive_id(&self) -> i64 {
+        self.keep_alive_id.clone().unwrap()
+    }
+    pub fn get_last_keep_alive(&self) -> std::time::Instant {
+        self.last_keep_alive.clone().unwrap()
     }
 }

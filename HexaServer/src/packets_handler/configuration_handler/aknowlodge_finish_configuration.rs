@@ -10,14 +10,12 @@ extern crate rsa;
 use crate::{entity::entity::Entity, player::player_connection::ClientState, Player};
 
 pub async fn handle(
-    length: i32,
     buffer: &mut BytesMut,
     reader: &mut OwnedReadHalf,
     client: Arc<Mutex<Player>>,
     clients: Arc<Mutex<HashMap<String, Arc<Mutex<Player>>>>>,
 ) -> Result<(), String> {
     let _ = buffer;
-    let _ = length;
     let _ = reader;
     let client_clone = client.clone();
     let mut client = client.lock().await;
@@ -87,7 +85,7 @@ pub async fn handle(
     login_packet.write_boolean(false);
 
     connection.send_packet_builder(login_packet).await;
-    connection.set_last_keep_alive(Instant::now());
+    client.set_last_keep_alive(Instant::now());
     client.set_position(0.0, 1000.0, 0.0);
     connection.set_client_state(ClientState::PLAY);
 
