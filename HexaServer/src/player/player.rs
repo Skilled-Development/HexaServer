@@ -26,6 +26,8 @@ pub struct Player {
     pub velocity: (i16, i16, i16),
     pub last_keep_alive: Option<std::time::Instant>,
     pub keep_alive_id: Option<i64>,
+    pub is_sneaking: bool,
+    pub is_sprinting: bool,
 }
 
 impl Entity for Player {
@@ -60,7 +62,25 @@ impl Player {
             velocity: (0, 0, 0),
             last_keep_alive: None,
             keep_alive_id: None,
+            is_sneaking: false,
+            is_sprinting: false,
         }
+    }
+
+    pub fn is_sneaking(&self) -> bool {
+        self.is_sneaking
+    }
+
+    pub fn set_sneaking(&mut self, is_sneaking: bool) {
+        self.is_sneaking = is_sneaking;
+    }
+
+    pub fn is_sprinting(&self) -> bool {
+        self.is_sprinting
+    }
+
+    pub fn set_sprinting(&mut self, is_sprinting: bool) {
+        self.is_sprinting = is_sprinting;
     }
 
     pub fn get_connection(&self) -> Arc<Mutex<PlayerConnection>> {

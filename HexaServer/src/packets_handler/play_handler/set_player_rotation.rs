@@ -51,5 +51,8 @@ pub async fn handle(
         .broadcast_packet_except(client_clone, head_rotation)
         .await;
 
+    player.set_position(packet_x, packet_y, packet_z);
+    player.set_rotation(packet_yaw, packet_pitch);
+    player.set_on_ground(packet_on_ground);
     Ok(())
 }

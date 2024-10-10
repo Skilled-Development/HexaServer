@@ -8,6 +8,7 @@ pub mod packets_handler {
         pub mod keep_alive;
         pub mod pick_item;
         pub mod ping_request_play;
+        pub mod player_command;
         pub mod set_item_held;
         pub mod set_player_position;
         pub mod set_player_position_and_rotation;

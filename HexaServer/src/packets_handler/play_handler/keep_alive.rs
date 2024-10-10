@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bytes::{Buf, BytesMut};
+use bytes::BytesMut;
 use hexa_protocol_base::PacketReader;
 use tokio::sync::Mutex;
 

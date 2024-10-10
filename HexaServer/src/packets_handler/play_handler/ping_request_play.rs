@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bytes::{Buf, BytesMut};
+use bytes::BytesMut;
 use hexa_protocol::packets::client::play::ping_request_play_packet::PingRequestPlayPacket;
 use tokio::sync::Mutex;
 

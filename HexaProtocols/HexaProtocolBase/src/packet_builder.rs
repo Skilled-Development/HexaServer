@@ -63,8 +63,16 @@ impl PacketBuilder {
     }
 
     pub fn write_angle(&mut self, angle: f32) -> &mut Self {
-        let encoded_angle = ((angle / 360.0) * 256.0).round() as u8;
-        self.buffer.put_u8(encoded_angle);
+        // Asegurarse de que el yaw esté en el rango [0, 360)
+        let angle = if angle < 0.0 {
+            360.0 + angle % 360.0
+        } else {
+            angle % 360.0
+        };
+
+        // Convertir el yaw de grados a un valor de 1 byte (0-255)
+        let angle = ((angle / 360.0) * 256.0).round() as u8;
+        self.buffer.put_u8(angle);
         self
     }
     pub fn write_identifier(&mut self, identifier: String) -> &mut Self {

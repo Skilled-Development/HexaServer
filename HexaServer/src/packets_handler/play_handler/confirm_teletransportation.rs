@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use bytes::{Buf, BytesMut};
+use bytes::BytesMut;
 use hexa_protocol::packets::client::play::confirm_teleport_packet::ConfirmTeleportPacket;
 use hexa_protocol_base::PacketBuilder;
 use tokio::sync::Mutex;
