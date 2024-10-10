@@ -1,23 +1,14 @@
 use std::sync::Arc;
 
-use bytes::{Buf, BytesMut};
+use bytes::BytesMut;
 use hexa_protocol::packets::client::play::set_item_held_packet::SetItemHeldPacket;
-use tokio::{net::tcp::OwnedReadHalf, sync::Mutex};
+use tokio::sync::Mutex;
 
 use crate::player::player::Player;
 
-pub async fn handle(
-    length: i32,
-    buffer: &mut BytesMut,
-    reader: &mut OwnedReadHalf,
-    client: Arc<Mutex<Player>>,
-) -> Result<(), String> {
-    let _ = reader;
-    let _ = length;
-    let client = client.lock().await;
-    if buffer.remaining() < length as usize {
-        return Err("not_enough_data".to_string());
-    }
-    let _packet = SetItemHeldPacket::read_packet(buffer, client.get_protocol_version());
+pub async fn handle(buffer: &mut BytesMut, client: Arc<Mutex<Player>>) -> Result<(), String> {
+    let mut client = client.lock().await;
+    let packet = SetItemHeldPacket::read_packet(buffer, client.get_protocol_version());
+    client.set_held_slot(packet.get_slot());
     Ok(())
 }

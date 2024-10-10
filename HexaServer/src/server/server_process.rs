@@ -11,7 +11,7 @@ use tokio::{
 use crate::{
     packet::packet_buffer::PacketBuffer,
     packets_handler::play_handler::{
-        confirm_teletransportation, keep_alive, ping_request_play, player_command,
+        confirm_teletransportation, keep_alive, ping_request_play, player_command, set_item_held,
         set_player_position, set_player_position_and_rotation, set_player_rotation, swing_arm,
     },
     Player, ServerConfig,
@@ -119,6 +119,7 @@ impl ServerProcess {
             0x18 => keep_alive::handle(buffer, client.clone()).await,
             0x1C => set_player_rotation::handle(buffer, client.clone(), self).await,
             0x25 => player_command::handle(buffer, client.clone()).await,
+            0x2F => set_item_held::handle(buffer, client.clone()).await,
             _ => {
                 println!("Unknown packet ID: 0x{:x}", packet_id);
                 buffer.clear();

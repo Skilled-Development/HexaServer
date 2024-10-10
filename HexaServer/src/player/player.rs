@@ -28,6 +28,7 @@ pub struct Player {
     pub keep_alive_id: Option<i64>,
     pub is_sneaking: bool,
     pub is_sprinting: bool,
+    pub held_slot: i16,
 }
 
 impl Entity for Player {
@@ -64,7 +65,16 @@ impl Player {
             keep_alive_id: None,
             is_sneaking: false,
             is_sprinting: false,
+            held_slot: 0,
         }
+    }
+
+    pub fn get_held_slot(&self) -> i16 {
+        self.held_slot
+    }
+
+    pub fn set_held_slot(&mut self, held_slot: i16) {
+        self.held_slot = held_slot;
     }
 
     pub fn is_sneaking(&self) -> bool {
