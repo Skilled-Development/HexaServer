@@ -1,0 +1,25 @@
+func create_serverbound_player_position_packet(p player.Player, pack *packets.PacketReader) {
+	serverbound_player_position_packet, ok := serverbound.ReadServerboundPlayerPositionPacket_1_21(pack)
+	if !ok {
+		return
+	}
+	EnqueuePacket(p, serverbound_player_position_packet)
+}
+
+
+func handle_serverbound_position_packet(player player.Player, serverboundPlayerPositionPacket *serverbound.ServerboundPlayerPositionPacket_1_21) {
+	lastLocation := player.GetLocation()
+	x := serverboundPlayerPositionPacket.GetX()
+	feetY := serverboundPlayerPositionPacket.GetFeetY()
+	z := serverboundPlayerPositionPacket.GetZ()
+	onGround := serverboundPlayerPositionPacket.GetOnGround()
+	location := entities.Location{
+		X:     x,
+		Y:     feetY,
+		Z:     z,
+		Yaw:   lastLocation.Yaw,
+		Pitch: lastLocation.Pitch,
+	}
+	player.SetLocation(&location)
+	player.SetOnGround(onGround)
+}
