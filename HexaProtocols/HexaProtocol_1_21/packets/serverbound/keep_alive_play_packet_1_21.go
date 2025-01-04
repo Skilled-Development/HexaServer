@@ -31,12 +31,12 @@ func NewKeepAlivePlayPacket_1_21(keepAliveID int64) *KeepAlivePlayPacket_1_21 {
 	}
 }
 
-func ReadKeepAlivePlayPacket_1_21(packet packets.PacketReader) *KeepAlivePlayPacket_1_21 {
+func ReadKeepAlivePlayPacket_1_21(packet packets.PacketReader) KeepAlivePlayPacket_1_21 {
 	keepAliveID, err := packet.ReadLong()
 	if err != nil {
-		return nil
+		keepAliveID = 0
 	}
-	return &KeepAlivePlayPacket_1_21{
+	return KeepAlivePlayPacket_1_21{
 		PacketID:          0x1A,
 		ServerBoundPacket: true,
 		ProtocolVersion:   767,

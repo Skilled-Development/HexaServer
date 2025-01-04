@@ -45,4 +45,9 @@ type Player interface {
 	NeedsKeepAlivePacket() bool
 	GenerateKeepAliveID() int64
 	GetKeepAliveID() int64
+	GetSeeingEntityList() []int64
+	SetSeeingEntityList(entities []int64)
+	AddSeeingEntity(entityID int64)
+	RemoveSeeingEntity(entityID int64)
+	IsSeeingEntity(entityID int64) bool
 }

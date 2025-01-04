@@ -35,12 +35,12 @@ type PlayerInfoEntry struct {
 
 type PlayerActionData struct {
 	ActionType            PlayerInfoActions
-	AddPlayerData         *AddPlayerData
-	InitializeChatData    *InitializeChatData
-	UpdateGameModeData    *UpdateGameModeData
-	UpdateListedData      *UpdateListedData
-	UpdateLatencyData     *UpdateLatencyData
-	UpdateDisplayNameData *UpdateDisplayNameData
+	AddPlayerData         AddPlayerData
+	InitializeChatData    InitializeChatData
+	UpdateGameModeData    UpdateGameModeData
+	UpdateListedData      UpdateListedData
+	UpdateLatencyData     UpdateLatencyData
+	UpdateDisplayNameData UpdateDisplayNameData
 }
 
 type AddPlayerData struct {

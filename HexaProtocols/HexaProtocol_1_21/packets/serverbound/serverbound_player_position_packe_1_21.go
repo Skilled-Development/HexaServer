@@ -77,24 +77,24 @@ func NewServerboundPlayerPositionPacket_1_21(x float64, feetY float64, z float64
 	}
 }
 
-func ReadServerboundPlayerPositionPacket_1_21(packet packets.PacketReader) (*ServerboundPlayerPositionPacket_1_21, bool) {
+func ReadServerboundPlayerPositionPacket_1_21(packet packets.PacketReader) (ServerboundPlayerPositionPacket_1_21, bool) {
 	x, err := packet.ReadDouble()
 	if err != nil {
-		return &ServerboundPlayerPositionPacket_1_21{}, false
+		return ServerboundPlayerPositionPacket_1_21{}, false
 	}
 	feetY, err := packet.ReadDouble()
 	if err != nil {
-		return &ServerboundPlayerPositionPacket_1_21{}, false
+		return ServerboundPlayerPositionPacket_1_21{}, false
 	}
 	z, err := packet.ReadDouble()
 	if err != nil {
-		return &ServerboundPlayerPositionPacket_1_21{}, false
+		return ServerboundPlayerPositionPacket_1_21{}, false
 	}
 	onGround, err := packet.ReadBoolean()
 	if err != nil {
-		return &ServerboundPlayerPositionPacket_1_21{}, false
+		return ServerboundPlayerPositionPacket_1_21{}, false
 	}
-	return &ServerboundPlayerPositionPacket_1_21{
+	return ServerboundPlayerPositionPacket_1_21{
 		PacketID:          0x1A,
 		ServerBoundPacket: true,
 		ProtocolVersion:   767,

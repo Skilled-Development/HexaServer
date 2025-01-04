@@ -77,14 +77,10 @@ func (p *Packet) Build() []byte {
 func (p *Packet) Send(pl player.Player) {
 	// Obtener la conexión del jugador
 	conn := pl.GetConn()
-
 	newBuffer := p.Build()
-
-	// Escribir el paquete en la conexión
-	(*conn).Write(newBuffer) //<-- Error here
+	(*conn).Write(newBuffer)
 
 	if p.GetClientState() == player.Play {
 		pl.AddPacketLogToPlayer(p.GetLogMessage())
 	}
 }
-

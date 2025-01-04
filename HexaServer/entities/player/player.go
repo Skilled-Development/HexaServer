@@ -41,6 +41,37 @@ type Player struct {
 	SkinValue           string
 	SkinSignature       string
 	LastKeepAliveTime   int64
+	SeeingEntityList    []int64
+}
+
+func (p *Player) GetSeeingEntityList() []int64 {
+	return p.SeeingEntityList
+}
+
+func (p *Player) SetSeeingEntityList(list []int64) {
+	p.SeeingEntityList = list
+}
+
+func (p *Player) AddSeeingEntity(entityID int64) {
+	p.SeeingEntityList = append(p.SeeingEntityList, entityID)
+}
+
+func (p *Player) IsSeeingEntity(entityID int64) bool {
+	for _, id := range p.SeeingEntityList {
+		if id == entityID {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *Player) RemoveSeeingEntity(entityID int64) {
+	for i, id := range p.SeeingEntityList {
+		if id == entityID {
+			p.SeeingEntityList = append(p.SeeingEntityList[:i], p.SeeingEntityList[i+1:]...)
+			break
+		}
+	}
 }
 
 func (p *Player) NeedsKeepAlivePacket() bool {
@@ -265,7 +296,7 @@ func NewPlayer(entityId int64, UUID uuid.UUID) *Player {
 		PlayerState:     player.Handshake,
 		Conn:            nil,
 		ProtocolVersion: 0,
-		Location:        entities.NewLocation(0, 100, 0, 0, 0),
+		Location:        entities.NewLocation(99, 75, 115, 0, 0),
 		OnGround:        false,
 		SkinValue:       "ewogICJ0aW1lc3RhbXAiIDogMTcyMDEwMDIxNzMyOCwKICAicHJvZmlsZUlkIiA6ICJiM2E3NjExNGVmMzI0ZjYyYWM4NDRiOWJmNTY1NGFiOSIsCiAgInByb2ZpbGVOYW1lIiA6ICJNcmd1eW1hbnBlcnNvbiIsCiAgInNpZ25hdHVyZVJlcXVpcmVkIiA6IHRydWUsCiAgInRleHR1cmVzIiA6IHsKICAgICJTS0lOIiA6IHsKICAgICAgInVybCIgOiAiaHR0cDovL3RleHR1cmVzLm1pbmVjcmFmdC5uZXQvdGV4dHVyZS81YWFhMzRhMjcxNjY3OGEyMWRmZjU0N2Q0MGUwYjg3MWFmNTNmMzllNzAzYmE5MzMxOGUyNmFhYmFmYWI1MDIwIgogICAgfQogIH0KfQ==",
 		SkinSignature:   "h5B2VYWXCVfeIkFx0utRGeDTHGMFyZsGb2I7tbjd6xXp445snJX9XzF4ppxJWnLvTlCvivmOJ+M22hVrV4iqtjXH9AdYXYFspvnflA9fGgNs/dwkDIY6atsgJ8kbmK5EoY1rLU4Dc4w2CrKndVig2cGKvJvWDcOFclu01uNHnbs7F3v/pBeVy6sQA4VtdXUdy5BUGSDD0/M1096TtSJqeeuXzMvHxtDsCGiDGmofhjZDsGAfQvkWbh8zsO4r0tdjoeeP4/32G9AistoZb3Xf98M6m33m2/GuY5T9zGO7WJ3gbA7lvl7qd58bl8yDZAl7LVj3MvMoWG9qvLYnpp1SmKCDYVBK3ZZmq0BFadBm5lbCc5xO1Q7MHJ9hq7Gbf9Z0eYkdQEJ5pL3fXQ2ihsZY+Y5SGqrm0+G40GVz+HQItndpc9mNQcZf1tvPnssSbL+roxrSBG8XfpGz+hIDJkLslkPiLeQRUQPci8sYNHxN8B2otBOc512tOWAdDuYqacj6P1rG6tspH5jYR5q6a5RqTC2i2CoA+sdzq62FV8byQy/pFngJAq+8/svD2WKWAiFUfBcTJP8FZMhQ2AJQW6rq5GqZWb9BPxZV4M3zqDSnjHevgBTwvdWbYBT9yQ8NcrubWHfXEaNUpzdMa41XVBAwSY1smPapK/c2YD60VKffuLg=",
@@ -312,34 +343,35 @@ func (p *Player) GetHealth() float64 {
 
 func (p *Player) AddPacketLogToPlayer(log string) {
 	/*
-		go func() {
-			basePath, err := os.Getwd()
-			if err != nil {
-				return
-			}
-			logDir := filepath.Join(basePath, "logs", "packet")
-			logFilePath := filepath.Join(logDir, fmt.Sprintf("%s.txt", p.UUID))
+		TODO: Implementar la escritura de logs en archivos
+			go func() {
+				basePath, err := os.Getwd()
+				if err != nil {
+					return
+				}
+				logDir := filepath.Join(basePath, "logs", "packet")
+				logFilePath := filepath.Join(logDir, fmt.Sprintf("%s.txt", p.UUID))
 
-			// Crear los directorios si no existen
-			p.mu.Lock() // Evitar condiciones de carrera
-			defer p.mu.Unlock()
+				// Crear los directorios si no existen
+				p.mu.Lock() // Evitar condiciones de carrera
+				defer p.mu.Unlock()
 
-			err = os.MkdirAll(logDir, os.ModePerm)
-			if err != nil {
-				return
-			}
+				err = os.MkdirAll(logDir, os.ModePerm)
+				if err != nil {
+					return
+				}
 
-			// Abrir el archivo en modo append
-			file, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			if err != nil {
-				return
-			}
-			defer file.Close()
+				// Abrir el archivo en modo append
+				file, err := os.OpenFile(logFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+				if err != nil {
+					return
+				}
+				defer file.Close()
 
-			// Escribir el log en el archivo
-			_, err = file.WriteString(log + "\n")
-			if err != nil {
-				return
-			}
-		}()*/
+				// Escribir el log en el archivo
+				_, err = file.WriteString(log + "\n")
+				if err != nil {
+					return
+				}
+			}()*/
 }

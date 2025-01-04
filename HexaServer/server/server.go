@@ -2,6 +2,7 @@
 package server
 
 import (
+	tick_1_21 "HexaProtocol_1_21/entities/tick"
 	"HexaProtocol_1_21/packets"
 	hexaProtocol_1_21 "HexaProtocol_1_21/protocol"
 	entities_manager "HexaServer/entities/manager"
@@ -135,7 +136,6 @@ func (s *Server) handleClient(Player *player.Player) {
 	for {
 		// Lee los paquetes del cliente
 		n, err := conn.Read(buffer)
-		println("NEW UNCOMING PACKET ========================================================")
 		if err != nil {
 			log.Printf("Error al leer del cliente %s: %v\n", conn.RemoteAddr(), err)
 			conn.Close()
@@ -167,22 +167,21 @@ func (s *Server) runTick() {
 
 	for range ticker.C {
 		tickStart := time.Now()
-		s.tick()
+		s.tick(tickCount)
 		elapsedTime := time.Since(tickStart)
-		mspt := float64(elapsedTime.Microseconds()) / 1000.0
+		mspt := float64(elapsedTime.Microseconds()) / 1000.0000000
 		msptList = append(msptList, mspt)
 		tickCount++
 
 		if tickCount == 20 {
 			//runtime.GC()
 			tickCount = 0
-
-			var sum float64
+			/*var sum float64
 			for _, val := range msptList {
 				sum += val
 			}
 			medianMspt := sum / float64(len(msptList))
-			tps := 1000.0 / medianMspt
+			tps := 1000.0000000 / medianMspt
 
 			//log.Printf("MSPT: %.4fms TPS: %.2f\n", medianMspt, tps)
 			msptList = msptList[:0] // Limpiamos la lista
@@ -224,7 +223,7 @@ func (s *Server) runTick() {
 						for i := 0; i < 60; i++ {
 							sendMessage(player, "          ")
 						}
-						sendMessage(player, "MSPT: "+fmt.Sprintf("%.4fms TPS: %.2f", medianMspt, tps))
+						sendMessage(player, "MSPT: "+fmt.Sprintf("%.6fms TPS: %.6f", medianMspt, tps))
 						sendMessage(player, "Memoria asignada en el heap: "+fmt.Sprintf("%.2f MB", heapAllocMB))
 						sendMessage(player, "Memoria del stack: "+fmt.Sprintf("%.2f MB", stackInUseMB))
 						sendMessage(player, "Memoria reservada por Go en el sistema: "+fmt.Sprintf("%.2f MB", sysMB))
@@ -241,7 +240,7 @@ func (s *Server) runTick() {
 					}
 
 				}
-			}
+			}*/
 			//runtime.GC()
 		}
 
@@ -265,11 +264,11 @@ func sendMessage(player *player.Player, message string) {
 	packet.GetPacket().Send(player)
 	packetPool.Put(packet)
 }
-
-func (s *Server) tick() {
+func (s *Server) tick(tickNumber int) {
 	// Lógica del tick del servidor aquí
 	// por ejemplo, actualizar la posición de los objetos, manejar la IA, enviar paquetes a los clientes, etc.
 	packets.RunPlayTick(s.EntitiesManager)
+	tick_1_21.TickEntities(tickNumber)
 }
 func bytesToMB(bytes uint64) float64 {
 	return float64(bytes) / (1024 * 1024)

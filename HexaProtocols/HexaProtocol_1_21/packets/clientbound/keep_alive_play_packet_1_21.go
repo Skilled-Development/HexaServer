@@ -3,7 +3,6 @@ package clientbound
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
-	"fmt"
 )
 
 type KeepAlivePlayPacket_1_21 struct {
@@ -34,8 +33,6 @@ func (p *KeepAlivePlayPacket_1_21) SetKeepAliveID(keepAliveID int64) {
 
 func (p *KeepAlivePlayPacket_1_21) GetPacket() *packets.Packet {
 	packet := packets.NewPacketWriter()
-	println("KeepAlivePlayPacket_1_21: Writing packet ID")
-	println(fmt.Sprintf("0x%X", p.PacketID))
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteLong(p.KeepAliveID)
 	real_packet := packets.NewPacket(p.PacketID,

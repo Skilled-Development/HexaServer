@@ -18,67 +18,67 @@ type ServerboundPlayerPositionAndRotation_1_21 struct {
 	OnGround          bool
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) GetX() float64 {
+func (p ServerboundPlayerPositionAndRotation_1_21) GetX() float64 {
 	return p.X
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) SetX(x float64) {
+func (p ServerboundPlayerPositionAndRotation_1_21) SetX(x float64) {
 	p.X = x
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) GetFeetY() float64 {
+func (p ServerboundPlayerPositionAndRotation_1_21) GetFeetY() float64 {
 	return p.FeetY
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) SetFeetY(feetY float64) {
+func (p ServerboundPlayerPositionAndRotation_1_21) SetFeetY(feetY float64) {
 	p.FeetY = feetY
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) GetZ() float64 {
+func (p ServerboundPlayerPositionAndRotation_1_21) GetZ() float64 {
 	return p.Z
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) SetZ(z float64) {
+func (p ServerboundPlayerPositionAndRotation_1_21) SetZ(z float64) {
 	p.Z = z
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) GetYaw() float32 {
+func (p ServerboundPlayerPositionAndRotation_1_21) GetYaw() float32 {
 	return p.Yaw
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) SetYaw(yaw float32) {
+func (p ServerboundPlayerPositionAndRotation_1_21) SetYaw(yaw float32) {
 	p.Yaw = yaw
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) GetPitch() float32 {
+func (p ServerboundPlayerPositionAndRotation_1_21) GetPitch() float32 {
 	return p.Pitch
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) SetPitch(pitch float32) {
+func (p ServerboundPlayerPositionAndRotation_1_21) SetPitch(pitch float32) {
 	p.Pitch = pitch
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) GetOnGround() bool {
+func (p ServerboundPlayerPositionAndRotation_1_21) GetOnGround() bool {
 	return p.OnGround
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) SetOnGround(onGround bool) {
+func (p ServerboundPlayerPositionAndRotation_1_21) SetOnGround(onGround bool) {
 	p.OnGround = onGround
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) GetProtocolVersion() int {
+func (p ServerboundPlayerPositionAndRotation_1_21) GetProtocolVersion() int {
 	return p.ProtocolVersion
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) GetPacketID() int {
+func (p ServerboundPlayerPositionAndRotation_1_21) GetPacketID() int {
 	return p.PacketID
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) GetState() player.ClientState {
+func (p ServerboundPlayerPositionAndRotation_1_21) GetState() player.ClientState {
 	return p.State
 }
 
-func (p *ServerboundPlayerPositionAndRotation_1_21) IsServerBound() bool {
+func (p ServerboundPlayerPositionAndRotation_1_21) IsServerBound() bool {
 	return p.ServerBoundPacket
 }
 

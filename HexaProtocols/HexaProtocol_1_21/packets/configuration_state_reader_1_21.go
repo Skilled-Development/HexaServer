@@ -1,8 +1,11 @@
 package packets
 
 import (
+	current_entities "HexaProtocol_1_21/entities"
 	"HexaProtocol_1_21/packets/clientbound"
+	clientbound_play "HexaProtocol_1_21/packets/clientbound/play"
 	serverbound "HexaProtocol_1_21/packets/serverbound"
+	entities_manager "HexaServer/entities/manager"
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
 	packet_utils "HexaUtils/packets/utils"
@@ -42,11 +45,11 @@ func ReadConfigurationStatePacket(server_config config.ServerConfig, p player.Pl
 }
 
 func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player, pack *packets.PacketReader) {
+	//TODO: PLAYER JOIN WORLD EVENT
 	p.SetClientState(player.Play)
 	packet := clientbound.NewPlayPacket_1_21(p)
 	packet.GetPacket().Send(p)
-	flags := clientbound.CreateFlags(clientbound.FlagPitch, clientbound.FlagYaw, clientbound.FlagX, clientbound.FlagY, clientbound.FlagZ)
-	synchronize_player_position_packet := clientbound.NewSynchronizePlayerPositionPacketFromPlayer_1_21(p, flags)
+	synchronize_player_position_packet := clientbound.NewSynchronizePlayerPositionPacketFromPlayer_1_21(p, 0)
 	synchronize_player_position_packet.GetPacket().Send(p)
 
 	game_event_packet := clientbound.NewGameEventPacket_1_21(clientbound.StartWaitingForLevelChunksEvent, 0)
@@ -79,6 +82,115 @@ func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player,
 	debugger.SetDebugTest(false)
 	println("Time to send chunks:", time.Since(startTimeSendChunks).Milliseconds(), "ms")
 
+	addPlayerPacket := clientbound.NewPlayerInfoUpdatePacket_1_21(clientbound.AddPlayerAction, []clientbound.PlayerInfoEntry{getPlayerInfoEntry(p)})
+	others_players := entities_manager.EntityManagerInstance.GetPlayersExcept(p.GetEntityId())
+	for _, other_player := range others_players {
+		sendMessage("Player "+p.GetName()+" joined the game", other_player)
+		sendMessage("Tu nombre es "+p.GetName(), p)
+
+		pLocation := p.GetLocation()
+		spawn_player_packet := clientbound_play.NewSpawnEntityPacket_1_21(
+			int32(p.GetEntityId()),
+			p.GetUUID(),
+			current_entities.PLAYER,
+			pLocation.X,
+			pLocation.Y,
+			pLocation.Z,
+			pLocation.Pitch,
+			pLocation.Yaw,
+			pLocation.Yaw,
+			0,
+			0,
+			0,
+			0,
+		)
+		addPlayerPacket.GetPacket().Send(other_player)
+		spawn_player_packet.GetPacket().Send(other_player)
+		other_player.RemoveSeeingEntity(p.GetEntityId())
+		other_player.AddSeeingEntity(p.GetEntityId())
+
+		addOtherPlayerPacket := clientbound.NewPlayerInfoUpdatePacket_1_21(clientbound.AddPlayerAction, []clientbound.PlayerInfoEntry{getPlayerInfoEntry(other_player)})
+		other_location := other_player.GetLocation()
+		spawn_other_palyer := clientbound_play.NewSpawnEntityPacket_1_21(
+			int32(other_player.GetEntityId()),
+			other_player.GetUUID(),
+			current_entities.PLAYER,
+			other_location.X,
+			other_location.Y,
+			other_location.Z,
+			other_location.Pitch,
+			other_location.Yaw,
+			other_location.Yaw,
+			0,
+			0,
+			0,
+			0,
+		)
+		addOtherPlayerPacket.GetPacket().Send(p)
+		spawn_other_palyer.GetPacket().Send(p)
+		p.RemoveSeeingEntity(other_player.GetEntityId())
+		p.AddSeeingEntity(other_player.GetEntityId())
+		//sendMessage("Player "+p.GetName()+" spawned at "+fmt.Sprintf("%.2f", pLocation.X)+", "+fmt.Sprintf("%.2f", pLocation.Y)+", "+fmt.Sprintf("%.2f", pLocation.Z), other_player)
+	}
+	//sendMessage("Bienvenido a HexaServer "+p.GetName()+", Disfruta!!", p)
+
+	go func() {
+		time.Sleep(1 * time.Second)
+		others_players := entities_manager.EntityManagerInstance.GetPlayers()
+		for _, other_player := range others_players {
+			teleportPacket := clientbound_play.NewTeleportEntityPacket_1_21(
+				int32(other_player.GetEntityId()),
+				other_player.GetLocation().X,
+				other_player.GetLocation().Y,
+				other_player.GetLocation().Z,
+				byte(other_player.GetLocation().Yaw),
+				byte(other_player.GetLocation().Pitch),
+				other_player.IsOnGround(),
+			)
+			teleportPacket.GetPacket().Send(p)
+
+			teleportPacket2 := clientbound_play.NewTeleportEntityPacket_1_21(
+				int32(p.GetEntityId()),
+				p.GetLocation().X,
+				p.GetLocation().Y,
+				p.GetLocation().Z,
+				byte(p.GetLocation().Yaw),
+				byte(p.GetLocation().Pitch),
+				p.IsOnGround(),
+			)
+			teleportPacket2.GetPacket().Send(other_player)
+		}
+
+	}()
+
+}
+
+func sendMessage(s string, p player.Player) {
+	packet := clientbound.NewSystemChatMessagePacket_1_21(s, false)
+	packet.GetPacket().Send(p)
+}
+
+func getPlayerInfoEntry(p player.Player) clientbound.PlayerInfoEntry {
+	current_player_skin_signature := p.GetSkinSignature()
+	property := clientbound.PlayerProperty{
+		Name:      "textures",
+		Value:     p.GetSkinValue(),
+		IsSigned:  true,
+		Signature: current_player_skin_signature,
+	}
+	add_player_data_action := clientbound.AddPlayerData{
+		Name:       p.GetName(),
+		Properties: []clientbound.PlayerProperty{property},
+	}
+	player_action := clientbound.PlayerActionData{
+		ActionType:    clientbound.AddPlayerAction,
+		AddPlayerData: add_player_data_action,
+	}
+	player_info_entry := clientbound.PlayerInfoEntry{
+		UUID:          p.GetUUID(),
+		PlayerActions: []clientbound.PlayerActionData{player_action},
+	}
+	return player_info_entry
 }
 
 func handle_serverbound_known_packs_packet(p player.Player, pack *packets.PacketReader) {
