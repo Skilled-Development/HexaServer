@@ -612,6 +612,7 @@ func ReadSetEntityMetadataPacket_1_21(packet *packets.PacketReader) (*SetEntityM
 
 func (p SetEntityMetadataPacket_1_21) GetPacket() *packets.Packet {
 	packet := packets.NewPacketWriter()
+	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(p.EntityID)
 
 	for _, entry := range p.Metadata {
@@ -620,7 +621,7 @@ func (p SetEntityMetadataPacket_1_21) GetPacket() *packets.Packet {
 
 	real_packet := packets.NewPacket(p.PacketID,
 		p.ProtocolVersion,
-		"SetEntityMetadataPacket_1_21",
+		"SetEntityMetadataPacket",
 		packet.GetPacketBuffer(),
 		p.ClientBoundPacket,
 		p.State)

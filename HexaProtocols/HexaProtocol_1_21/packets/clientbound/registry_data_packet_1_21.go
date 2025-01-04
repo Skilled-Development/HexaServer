@@ -4,8 +4,6 @@ import (
 	player "HexaUtils/entities/player"
 	"HexaUtils/packets"
 	registries "HexaUtils/registries"
-	"log"
-	"os"
 )
 
 type RegistryDataPacket_1_21 struct {
@@ -39,14 +37,6 @@ func (p *RegistryDataPacket_1_21) GetPacket() *packets.Packet {
 		packet.WriteIdentifier("minecraft:" + registry.GetName())
 		packet.WriteBoolean(true)
 		packet.WriteNBT(registry)
-	}
-	packetBytes := packet.GetAsPacket().GetPacketBuffer()
-	if err := os.Remove("packet_data.bin"); err != nil && !os.IsNotExist(err) {
-		log.Fatalf("Error deleting packet_data.bin: %v", err)
-	}
-	newerror := os.WriteFile("packet_data.bin", packetBytes, 0644)
-	if newerror != nil {
-		log.Fatalf("Error al guardar packetBytes en el archivo: %v", newerror)
 	}
 
 	real_packet := packets.NewPacket(p.PacketID,

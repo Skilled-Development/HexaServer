@@ -1,2 +1,3 @@
 # Ignore logs directory
 HexaTest/logs/
+HexaTest/packetdata.bin
