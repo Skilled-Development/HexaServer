@@ -42,9 +42,26 @@ func handlePackets(player player.Player, packet Packet_1_21) {
 		handle_serverbound_player_rotation_packet(player, p)
 	case serverbound_play.PlayerCommandPacket_1_21:
 		handle_serverbound_player_command_packet(player, p)
+	case serverbound_play.SwingArmPacket_1_21:
+		handle_serverbound_swing_arm_packet(player, p)
 	default:
 		fmt.Println("Paquete desconocido recibido", packet.GetPacket().GetPacketID())
 		fmt.Printf("Packet type: %T\n", packet)
+	}
+}
+
+func handle_serverbound_swing_arm_packet(playerP player.Player, p serverbound_play.SwingArmPacket_1_21) {
+	hand := p.GetHand()
+	allPlayers := entities_manager.EntityManagerInstance.GetPlayersExcept(playerP.GetEntityId())
+	animation := clientbound_play.SwingMainArm
+	if hand == player.OffHand {
+		animation = clientbound_play.SwingOffhand
+	}
+	entity_animation_packet := clientbound_play.NewEntityAnimationPacket_1_21(int32(playerP.GetEntityId()), animation)
+	for _, other := range allPlayers {
+		if other.GetClientState().String() == "Play" && other.IsSeeingEntity(playerP.GetEntityId()) {
+			entity_animation_packet.GetPacket().Send(other)
+		}
 	}
 }
 
@@ -66,11 +83,21 @@ func ReadPlayStatePacket(server_config *config.ServerConfig, p player.Player, le
 		create_player_rotation_packet(p, pack)
 	case 0x25:
 		create_player_command_packet(p, pack)
+	case 0x36:
+		create_swing_arm_packet(p, pack)
 	default:
 		println("Unknown packet ID:", fmt.Sprintf("0x%X", packet_id))
 		println("Unknown packet ID:", packet_id)
 	}
 
+}
+
+func create_swing_arm_packet(p player.Player, pack packets.PacketReader) {
+	swing_arm_packet, ok := serverbound_play.ReadSwingArmPacket_1_21(pack)
+	if !ok {
+		return
+	}
+	EnqueuePacket(p, swing_arm_packet)
 }
 
 func create_player_command_packet(p player.Player, pack packets.PacketReader) {
