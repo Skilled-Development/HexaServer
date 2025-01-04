@@ -42,6 +42,33 @@ type Player struct {
 	SkinSignature       string
 	LastKeepAliveTime   int64
 	SeeingEntityList    []int64
+	JumpBoost           int32
+	Sneaking            bool
+	Sprinting           bool
+}
+
+func (p *Player) SetSprinting(sprinting bool) {
+	p.Sprinting = sprinting
+}
+
+func (p *Player) IsSprinting() bool {
+	return p.Sprinting
+}
+
+func (p *Player) SetSneaking(sneaking bool) {
+	p.Sneaking = sneaking
+}
+
+func (p *Player) IsSneaking() bool {
+	return p.Sneaking
+}
+
+func (p *Player) SetJumpBoost(jumpBoost int32) {
+	p.JumpBoost = jumpBoost
+}
+
+func (p *Player) GetJumpBoost() int32 {
+	return p.JumpBoost
 }
 
 func (p *Player) GetSeeingEntityList() []int64 {

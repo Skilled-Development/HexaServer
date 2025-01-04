@@ -1,5 +1,4 @@
-// clientbound/updateposition.go
-package clientbound
+package play
 
 import (
 	"HexaUtils/entities/player"

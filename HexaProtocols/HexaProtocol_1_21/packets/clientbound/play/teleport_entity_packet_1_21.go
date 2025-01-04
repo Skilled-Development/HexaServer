@@ -1,5 +1,5 @@
 // clientbound/teleportentity.go
-package clientbound
+package play
 
 import (
 	"HexaUtils/entities/player"

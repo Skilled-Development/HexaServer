@@ -1,5 +1,4 @@
-// clientbound/spawnentity.go
-package clientbound
+package play
 
 import (
 	"HexaProtocol_1_21/entities"

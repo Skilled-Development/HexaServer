@@ -4,6 +4,7 @@ import (
 	"HexaProtocol_1_21/packets/clientbound"
 	clientbound_play "HexaProtocol_1_21/packets/clientbound/play"
 	"HexaProtocol_1_21/packets/serverbound"
+	serverbound_play "HexaProtocol_1_21/packets/serverbound/play"
 	entities_manager "HexaServer/entities/manager"
 	"HexaUtils/entities"
 	"HexaUtils/entities/player"
@@ -37,6 +38,10 @@ func handlePackets(player player.Player, packet Packet_1_21) {
 		handle_serverbound_keep_alive_packet(player, p)
 	case serverbound.ServerboundPlayerPositionPacket_1_21:
 		handle_serverbound_position_packet(player, p)
+	case serverbound_play.SetPlayerRotationPacket_1_21:
+		handle_serverbound_player_rotation_packet(player, p)
+	case serverbound_play.PlayerCommandPacket_1_21:
+		handle_serverbound_player_command_packet(player, p)
 	default:
 		fmt.Println("Paquete desconocido recibido", packet.GetPacket().GetPacketID())
 		fmt.Printf("Packet type: %T\n", packet)
@@ -57,11 +62,113 @@ func ReadPlayStatePacket(server_config *config.ServerConfig, p player.Player, le
 		create_serverbound_keep_alive_packet(p, pack)
 	case 0x1A:
 		create_serverbound_player_position_packet(p, pack)
+	case 0x1C:
+		create_player_rotation_packet(p, pack)
+	case 0x25:
+		create_player_command_packet(p, pack)
 	default:
 		println("Unknown packet ID:", fmt.Sprintf("0x%X", packet_id))
 		println("Unknown packet ID:", packet_id)
 	}
 
+}
+
+func create_player_command_packet(p player.Player, pack packets.PacketReader) {
+	player_command_packet, ok := serverbound_play.ReadPlayerCommandPacket_1_21(&pack)
+	if !ok {
+		return
+	}
+	EnqueuePacket(p, player_command_packet)
+}
+
+func handle_serverbound_player_command_packet(player player.Player, p serverbound_play.PlayerCommandPacket_1_21) {
+	actionID := p.GetActionID()
+	jumpBoost := p.GetJumpBoost()
+	player.SetJumpBoost(jumpBoost)
+	switch actionID {
+	case serverbound_play.StartSneaking:
+		player.SetSneaking(true)
+		metadata := []*clientbound_play.MetadataEntry{
+			{
+				Index: 6,
+				Type:  clientbound_play.MetadataTypePose,
+				Value: int32(5),
+			},
+			{
+				Index: 0xff,
+			},
+		}
+		metadataPacket := clientbound_play.NewSetEntityMetadataPacket_1_21(
+			int32(player.GetEntityId()),
+			metadata,
+		)
+		allPlayers := entities_manager.EntityManagerInstance.GetPlayersExcept(player.GetEntityId())
+		for _, other := range allPlayers {
+			if other.GetClientState().String() == "Play" && other.IsSeeingEntity(player.GetEntityId()) {
+				metadataPacket.GetPacket().Send(other)
+			}
+		}
+	case serverbound_play.StopSneaking:
+		player.SetSneaking(false)
+		metadata := []*clientbound_play.MetadataEntry{
+			{
+				Index: 6,
+				Type:  clientbound_play.MetadataTypePose,
+				Value: int32(0),
+			},
+			{
+				Index: 0xff,
+			},
+		}
+		metadataPacket := clientbound_play.NewSetEntityMetadataPacket_1_21(
+			int32(player.GetEntityId()),
+			metadata,
+		)
+		allPlayers := entities_manager.EntityManagerInstance.GetPlayersExcept(player.GetEntityId())
+		for _, other := range allPlayers {
+			if other.GetClientState().String() == "Play" && other.IsSeeingEntity(player.GetEntityId()) {
+				metadataPacket.GetPacket().Send(other)
+			}
+		}
+	case serverbound_play.StartSprinting:
+		player.SetSprinting(true)
+	case serverbound_play.StopSprinting:
+		player.SetSprinting(false)
+		//TODO: add more
+	}
+}
+
+func create_player_rotation_packet(p player.Player, pack packets.PacketReader) {
+	player_rotation_packet, ok := serverbound_play.ReadSetPlayerRotationPacket_1_21(&pack)
+	if !ok {
+		return
+	}
+	EnqueuePacket(p, player_rotation_packet)
+}
+
+func handle_serverbound_player_rotation_packet(player player.Player, p serverbound_play.SetPlayerRotationPacket_1_21) {
+	yaw := p.GetYaw()
+	pitch := p.GetPitch()
+	onGround := p.GetOnGround()
+	lastLocation := player.GetLocation()
+	location := entities.Location{
+		X:     lastLocation.X,
+		Y:     lastLocation.Y,
+		Z:     lastLocation.Z,
+		Yaw:   yaw,
+		Pitch: pitch,
+	}
+	player.SetLocation(&location)
+	player.SetOnGround(onGround)
+	updateHeadRotationPacket := clientbound_play.NewSetHeadRotationPacket_1_21(int32(player.GetEntityId()), byte(yaw*256/360))
+	updateEntityRotionPacket := clientbound_play.NewUpdateEntityRotationPacket_1_21(int32(player.GetEntityId()), byte(yaw*256/360), byte(pitch*256/360), onGround)
+	allPlayers := entities_manager.EntityManagerInstance.GetPlayersExcept(player.GetEntityId())
+	for _, other := range allPlayers {
+		if other.GetClientState().String() == "Play" && other.IsSeeingEntity(player.GetEntityId()) {
+			updateEntityRotionPacket.GetPacket().Send(other)
+			updateHeadRotationPacket.GetPacket().Send(other)
+		}
+	}
 }
 
 func create_confirm_teleport_packet(p player.Player, pack packets.PacketReader) {
@@ -105,15 +212,6 @@ func handle_serverbound_player_position_and_rotation_packet(p player.Player, ser
 		Yaw:   yaw,
 		Pitch: pitch,
 	}
-	distanceX := x - last_location.X
-	distanceY := feetY - last_location.Y
-	distanceZ := z - last_location.Z
-	if distanceX > 5 || distanceY > 5 || distanceZ > 5 {
-		println("Distance : ", distanceX, distanceY, distanceZ)
-		println("Player: ", p.GetName())
-		println("Last location: ", last_location.X, last_location.Y, last_location.Z)
-		println("Current location: ", x, feetY, z)
-	}
 	p.SetLocation(&location)
 	p.SetOnGround(onGround)
 
@@ -129,11 +227,21 @@ func handle_serverbound_player_position_and_rotation_packet(p player.Player, ser
 	deltaX := x*4096 - lastX*4096
 	deltaY := feetY*4096 - lastY*4096
 	deltaZ := z*4096 - lastZ*4096
-	updatePositionPacket := clientbound_play.NewUpdatePositionPacket_1_21(int32(p.GetEntityId()), int16(deltaX), int16(deltaY), int16(deltaZ), p.IsOnGround())
+	updatePositionPacket := clientbound_play.NewUpdatePositionAndRotationPacket_1_21(
+		int32(p.GetEntityId()),
+		int16(deltaX),
+		int16(deltaY),
+		int16(deltaZ),
+		byte(yaw*256/360),
+		byte(pitch*256/360),
+		p.IsOnGround(),
+	)
+	updateHeadRotationPacket := clientbound_play.NewSetHeadRotationPacket_1_21(int32(p.GetEntityId()), byte(yaw*256/360))
 	allPlayers := entities_manager.EntityManagerInstance.GetPlayersExcept(p.GetEntityId())
 	for _, other := range allPlayers {
 		if other.GetClientState().String() == "Play" && other.IsSeeingEntity(p.GetEntityId()) {
 			updatePositionPacket.GetPacket().Send(other)
+			updateHeadRotationPacket.GetPacket().Send(other)
 		}
 	}
 }
@@ -180,15 +288,6 @@ func handle_serverbound_position_packet(player player.Player, serverboundPlayerP
 		Yaw:   lastLocation.Yaw,
 		Pitch: lastLocation.Pitch,
 	}
-	distanceX := x - lastLocation.X
-	distanceY := feetY - lastLocation.Y
-	distanceZ := z - lastLocation.Z
-	if distanceX > 5 || distanceY > 5 || distanceZ > 5 {
-		println("Distance : ", distanceX, distanceY, distanceZ)
-		println("Player: ", player.GetName())
-		println("Last location: ", lastLocation.X, lastLocation.Y, lastLocation.Z)
-		println("Current location: ", x, feetY, z)
-	}
 	player.SetLocation(&location)
 	player.SetOnGround(onGround)
 	deltaX := x*4096 - lastX*4096
@@ -196,12 +295,9 @@ func handle_serverbound_position_packet(player player.Player, serverboundPlayerP
 	deltaZ := z*4096 - lastZ*4096
 	updatePositionPacket := clientbound_play.NewUpdatePositionPacket_1_21(int32(player.GetEntityId()), int16(deltaX), int16(deltaY), int16(deltaZ), player.IsOnGround())
 	allPlayers := entities_manager.EntityManagerInstance.GetPlayersExcept(player.GetEntityId())
-	//teleport_entity_packet := clientbound_play.NewTeleportEntityPacket_1_21(int32(player.GetEntityId()),
-	//	x, feetY, z, byte(lastLocation.Yaw), byte(lastLocation.Pitch), onGround)
 	for _, p := range allPlayers {
 		if p.GetClientState().String() == "Play" && p.IsSeeingEntity(player.GetEntityId()) {
 			updatePositionPacket.GetPacket().Send(p)
-			//teleport_entity_packet.GetPacket().Send(p)
 		}
 	}
 

@@ -50,4 +50,10 @@ type Player interface {
 	AddSeeingEntity(entityID int64)
 	RemoveSeeingEntity(entityID int64)
 	IsSeeingEntity(entityID int64) bool
+	SetJumpBoost(jumpBoost int32)
+	GetJumpBoost() int32
+	SetSneaking(sneaking bool)
+	IsSneaking() bool
+	SetSprinting(sprinting bool)
+	IsSprinting() bool
 }
