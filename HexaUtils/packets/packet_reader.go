@@ -15,11 +15,14 @@ import (
 // PacketReader es un lector de paquetes que usa un buffer.
 type PacketReader struct {
 	buffer *bytes.Buffer
+	// Buffer temporal para evitar asignaciones constantes.
+	temp []byte
 }
 
 // NewPacketReader crea un nuevo lector de paquetes.
 func NewPacketReader(data []byte) *PacketReader {
-	return &PacketReader{buffer: bytes.NewBuffer(data)}
+	// Inicializamos un temp con un tamaño suficiente para la lectura más grande (16 bytes para UUID)
+	return &PacketReader{buffer: bytes.NewBuffer(data), temp: make([]byte, 16)}
 }
 
 func (r *PacketReader) SetBuffer(data []byte) {
@@ -63,23 +66,17 @@ func (r *PacketReader) ReadVarInt() (int32, error) {
 
 // ReadUnsignedShort lee un unsigned short (u16) del buffer.
 func (r *PacketReader) ReadUnsignedShort() (uint16, error) {
-	// Verifica si hay suficientes bytes en el buffer (2 bytes)
 	if r.buffer.Len() < 2 {
 		return 0, errors.New("no hay suficientes bytes en el buffer para leer un unsigned short")
 	}
 
-	// Lee 2 bytes del buffer
-	bytes := make([]byte, 2)
-	_, err := r.buffer.Read(bytes)
+	// Lee directamente al buffer temporal
+	_, err := r.buffer.Read(r.temp[:2])
 	if err != nil {
 		return 0, err
 	}
 
-	// Convierte los 2 bytes a un unsigned short (uint16)
-	// Se asume que el orden es Big Endian (como el ejemplo de Rust)
-	// bytes[0] es el byte más significativo y bytes[1] es el menos significativo
-	value := binary.BigEndian.Uint16(bytes)
-
+	value := binary.BigEndian.Uint16(r.temp[:2])
 	return value, nil
 }
 
@@ -111,43 +108,32 @@ func (r *PacketReader) ReadVarLong() (int64, error) {
 
 // ReadLong lee un Long (int64) del buffer.
 func (r *PacketReader) ReadLong() (int64, error) {
-	// Verifica si hay suficientes bytes en el buffer (8 bytes)
 	if r.buffer.Len() < 8 {
 		return 0, errors.New("no hay suficientes bytes en el buffer para leer un long")
 	}
 
-	// Lee 8 bytes del buffer
-	bytes := make([]byte, 8)
-	_, err := r.buffer.Read(bytes)
+	_, err := r.buffer.Read(r.temp[:8])
 	if err != nil {
 		return 0, err
 	}
-
-	// Convierte los 8 bytes a un long (int64)
-	// Suponemos que el orden es Big Endian
-	value := int64(binary.BigEndian.Uint64(bytes))
-
+	value := int64(binary.BigEndian.Uint64(r.temp[:8]))
 	return value, nil
 }
 
 // ReadUUID lee un UUID (128 bits, 16 bytes) del buffer.
 func (r *PacketReader) ReadUUID() (uuid.UUID, error) {
-	// Verificamos si hay suficientes bytes en el buffer (16 bytes)
 	if r.buffer.Len() < 16 {
 		return uuid.Nil, errors.New("no hay suficientes bytes en el buffer para leer un UUID")
 	}
 
-	// Leemos los 16 bytes del buffer
-	bytes := make([]byte, 16)
-	_, err := r.buffer.Read(bytes)
+	// Lee los 16 bytes al buffer temporal
+	_, err := r.buffer.Read(r.temp)
 	if err != nil {
 		return uuid.Nil, err
 	}
 
-	// Convertimos los 16 bytes a un formato UUID
-	// Los primeros 8 bytes corresponden a los 64 bits más significativos, y los 8 siguientes a los menos significativos
-	msb := bytes[:8] // 64 bits más significativos
-	lsb := bytes[8:] // 64 bits menos significativos
+	msb := r.temp[:8] // 64 bits más significativos
+	lsb := r.temp[8:] // 64 bits menos significativos
 
 	// Devolvemos el UUID en el formato estándar de string
 	uuidString := fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
@@ -168,13 +154,14 @@ func (r *PacketReader) ReadString() (string, error) {
 		return "", err
 	}
 
-	bytes := make([]byte, length)
-	_, err = r.buffer.Read(bytes)
-	if err != nil {
-		return "", err
+	// Usar el buffer subyacente directamente para evitar copiar la string
+	buf := r.buffer.Next(int(length))
+
+	if len(buf) != int(length) {
+		return "", errors.New("no hay suficientes bytes en el buffer para leer la string")
 	}
 
-	return string(bytes), nil
+	return string(buf), nil
 }
 
 // Regex para validar Identifier
@@ -226,16 +213,14 @@ func (r *PacketReader) ReadBytes(length int) ([]byte, error) {
 		return nil, errors.New("la longitud no puede ser negativa")
 	}
 
-	// Verificar si hay suficientes bytes en el buffer
 	if r.buffer.Len() < length {
 		return nil, errors.New("no hay suficientes bytes en el buffer")
 	}
 
-	// Leer los bytes
-	bytes := make([]byte, length)
-	_, err := r.buffer.Read(bytes)
-	if err != nil {
-		return nil, err
+	// Usar el buffer subyacente directamente
+	bytes := r.buffer.Next(length)
+	if len(bytes) != length {
+		return nil, errors.New("no hay suficientes bytes en el buffer")
 	}
 
 	return bytes, nil
@@ -266,78 +251,60 @@ func (r *PacketReader) ReadUnsignedByte() (uint8, error) {
 
 // ReadShort lee un Short (int16) del buffer.
 func (r *PacketReader) ReadShort() (int16, error) {
-	// Verifica si hay suficientes bytes en el buffer (2 bytes)
 	if r.buffer.Len() < 2 {
 		return 0, errors.New("no hay suficientes bytes en el buffer para leer un short")
 	}
 
-	// Lee 2 bytes del buffer
-	bytes := make([]byte, 2)
-	_, err := r.buffer.Read(bytes)
+	_, err := r.buffer.Read(r.temp[:2])
 	if err != nil {
 		return 0, err
 	}
-
-	// Convierte los 2 bytes a un short (int16)
-	value := int16(binary.BigEndian.Uint16(bytes))
+	value := int16(binary.BigEndian.Uint16(r.temp[:2]))
 	return value, nil
 }
 
 // ReadInt lee un Int (int32) del buffer.
 func (r *PacketReader) ReadInt() (int32, error) {
-	// Verifica si hay suficientes bytes en el buffer (4 bytes)
 	if r.buffer.Len() < 4 {
 		return 0, errors.New("no hay suficientes bytes en el buffer para leer un int")
 	}
 
-	// Lee 4 bytes del buffer
-	bytes := make([]byte, 4)
-	_, err := r.buffer.Read(bytes)
+	_, err := r.buffer.Read(r.temp[:4])
 	if err != nil {
 		return 0, err
 	}
 
-	// Convierte los 4 bytes a un int (int32)
-	value := int32(binary.BigEndian.Uint32(bytes))
+	value := int32(binary.BigEndian.Uint32(r.temp[:4]))
 	return value, nil
 }
 
 // ReadFloat lee un Float (float32) del buffer.
 func (r *PacketReader) ReadFloat() (float32, error) {
-	// Verifica si hay suficientes bytes en el buffer (4 bytes)
 	if r.buffer.Len() < 4 {
 		return 0, errors.New("no hay suficientes bytes en el buffer para leer un float")
 	}
 
-	// Lee 4 bytes del buffer
-	bytes := make([]byte, 4)
-	_, err := r.buffer.Read(bytes)
+	_, err := r.buffer.Read(r.temp[:4])
 	if err != nil {
 		return 0, err
 	}
 
-	// Convierte los 4 bytes a un float (float32)
-	bits := binary.BigEndian.Uint32(bytes)
+	bits := binary.BigEndian.Uint32(r.temp[:4])
 	value := math.Float32frombits(bits)
 	return value, nil
 }
 
 // ReadDouble lee un Double (float64) del buffer.
 func (r *PacketReader) ReadDouble() (float64, error) {
-	// Verifica si hay suficientes bytes en el buffer (8 bytes)
 	if r.buffer.Len() < 8 {
 		return 0, errors.New("no hay suficientes bytes en el buffer para leer un double")
 	}
 
-	// Lee 8 bytes del buffer
-	bytes := make([]byte, 8)
-	_, err := r.buffer.Read(bytes)
+	_, err := r.buffer.Read(r.temp[:8])
 	if err != nil {
 		return 0, err
 	}
-
-	// Convierte los 8 bytes a un double (float64)
-	bits := binary.BigEndian.Uint64(bytes)
+	bits := binary.BigEndian.Uint64(r.temp[:8])
 	value := math.Float64frombits(bits)
 	return value, nil
 }
@@ -348,19 +315,9 @@ func (r *PacketReader) ReadPosition() (x, y, z int, err error) {
 	if err != nil {
 		return 0, 0, 0, err
 	}
-
 	x = int(val >> 38)
 	y = int(val << 52 >> 52)
 	z = int(val << 26 >> 38)
-	// if x >= 1<<25 {
-	// 	x -= 1 << 26
-	// }
-	// if y >= 1<<11 {
-	// 	y -= 1 << 12
-	// }
-	// if z >= 1<<25 {
-	// 	z -= 1 << 26
-	// }
 
 	return x, y, z, nil
 }
@@ -394,9 +351,7 @@ func (r *PacketReader) ReadBitSet() ([]uint64, error) {
 
 // ReadFixedBitSet lee un Fixed BitSet del buffer.
 func (r *PacketReader) ReadFixedBitSet(length int) ([]byte, error) {
-	// Calcula la longitud en bytes
 	byteLength := int(math.Ceil(float64(length) / 8.0))
-	// Lee los bytes
 	bitSet, err := r.ReadBytes(byteLength)
 	if err != nil {
 		return nil, err
@@ -406,8 +361,6 @@ func (r *PacketReader) ReadFixedBitSet(length int) ([]byte, error) {
 
 // ReadOptional lee un valor opcional de tipo T.
 func (r *PacketReader) ReadOptional(readFunc func() (interface{}, error)) (interface{}, error) {
-	// La presencia o ausencia del valor debe ser conocida por el contexto del paquete.
-	// Por lo tanto, esta función simplemente lee si el contexto lo requiere.
 	return readFunc()
 }
 

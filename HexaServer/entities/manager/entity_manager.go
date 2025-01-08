@@ -14,6 +14,7 @@ var EntityManagerInstance *EntityManager
 
 type EntityManager struct {
 	entities sync.Map // Using sync.Map for thread-safe access
+	players  []player.Player
 	freeIDs  []int64
 	nextID   int64
 	mu       sync.RWMutex
@@ -22,6 +23,7 @@ type EntityManager struct {
 func NewEntityManager() *EntityManager {
 	EntityManagerInstance = &EntityManager{
 		entities: sync.Map{},
+		players:  make([]player.Player, 0),
 		freeIDs:  make([]int64, 0),
 		nextID:   1,
 	}
@@ -50,12 +52,15 @@ func (em *EntityManager) CreatePlayer(conn net.Conn) player.Player {
 	newPlayer.SetConn(conn)
 
 	em.entities.Store(UUID, newPlayer) // Store by UUID
+	em.mu.Lock()
+	em.players = append(em.players, newPlayer)
+	em.mu.Unlock()
 	println("Created player with ID", id)
 
 	return newPlayer
 }
 
-// RemoveEntity removes an entity from the manager and marks its ID as free
+// RemovePlayer removes a player from the manager and marks its ID as free
 func (em *EntityManager) RemovePlayer(entity player.Player) {
 	if entity == nil {
 		return
@@ -66,8 +71,14 @@ func (em *EntityManager) RemovePlayer(entity player.Player) {
 
 	em.entities.Delete(entity.GetUUID())
 
-	em.freeIDs = append(em.freeIDs, entity.GetEntityId())
+	for i, p := range em.players {
+		if p.GetEntityId() == entity.GetEntityId() {
+			em.players = append(em.players[:i], em.players[i+1:]...)
+			break
+		}
+	}
 
+	em.freeIDs = append(em.freeIDs, entity.GetEntityId())
 }
 
 // GetEntity retrieves an entity by its UUID
@@ -81,27 +92,21 @@ func (em *EntityManager) GetEntity(uuid uuid.UUID) player.Player {
 
 // GetPlayers returns a slice of all players in the manager
 func (em *EntityManager) GetPlayers() []player.Player {
-	players := make([]player.Player, 0)
-	em.entities.Range(func(key, value interface{}) bool {
-		if p, ok := value.(player.Player); ok {
-			players = append(players, p)
-		}
-		return true
-	})
-	return players
+	em.mu.RLock()
+	defer em.mu.RUnlock()
+	return em.players
 }
 
 // GetPlayersExcept returns a slice of all players except the one with the given entity ID
 func (em *EntityManager) GetPlayersExcept(entityID int64) []player.Player {
 	players := make([]player.Player, 0)
-	em.entities.Range(func(key, value interface{}) bool {
-		if p, ok := value.(player.Player); ok {
-			if p.GetEntityId() != entityID {
-				players = append(players, p)
-			}
+	em.mu.RLock()
+	defer em.mu.RUnlock()
+	for _, p := range em.players {
+		if p.GetEntityId() != entityID {
+			players = append(players, p)
 		}
-		return true
-	})
+	}
 	return players
 }
 
