@@ -10,7 +10,6 @@ import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
 	config "HexaUtils/server/config"
-	"time"
 )
 
 var packetQueue []QueuedPacket
@@ -216,7 +215,6 @@ func handle_confirm_teleport_packet(p player.Player, confirm_teleport_packet ser
 	if teleportID != p.GetTeleportID() {
 		disconnectPacket := clientbound.NewDisconnectPacket_1_21(config.ServerConfigInstance.GetInvalidTpIdMessage())
 		disconnectPacket.GetPacket().Send(p)
-		time.Sleep(50 * time.Millisecond)
 		(*p.GetConn()).Close()
 		return
 	}
