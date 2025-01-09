@@ -79,8 +79,4 @@ func (p *Packet) Send(pl player.Player) {
 	conn := pl.GetConn()
 	newBuffer := p.Build()
 	(*conn).Write(newBuffer)
-
-	if p.GetClientState() == player.Play {
-		pl.AddPacketLogToPlayer(p.GetLogMessage())
-	}
 }
