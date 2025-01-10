@@ -56,6 +56,10 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 		Name: "minecraft:air",
 	}
 
+	graniteBlockState := &regionreader.BlockState{
+		Name: "minecraft:granite",
+	}
+
 	// 5. Iterate through Vertical Sections (Y)
 	for sectionY := int32(-4); sectionY < 20; sectionY++ {
 		section := &regionreader.Section{
@@ -84,6 +88,12 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 		}
 		airPaletteIndex := indexOfBlockState(section.BlockStates.Palette, airBlockState)
 
+		// Add granite to the palette if it's not there yet
+		if !containsBlockState(section.BlockStates.Palette, graniteBlockState) {
+			section.BlockStates.Palette = append(section.BlockStates.Palette, graniteBlockState)
+		}
+		granitePaletteIndex := indexOfBlockState(section.BlockStates.Palette, graniteBlockState)
+
 		// 6. Iterate through Blocks within the Section (Y, Z, X)
 		blockIndex := 0
 		currentInt := int64(0)
@@ -97,15 +107,20 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 					blockY := (sectionY * 16) + y
 
 					// 7. Calculate Noise Value
-					noiseValue := noise.Sample2D(float64(chunkX*16+x)/20, float64(chunkZ*16+z)/20)
-					surfaceY := int(float64(100) + (noiseValue * 30))
+					noiseValue := noise.Sample2D(float64(chunkX*16+x)/30, float64(chunkZ*16+z)/30)
+					surfaceY := int(float64(100) + (noiseValue * 20))
 
 					// 8. Determine Block Type based on Noise
 					var finalPaletteIndex int
 
 					// If the noise is above this threshold, place stone
 					if int(surfaceY) > int(blockY) {
-						finalPaletteIndex = stonePaletteIndex
+						//randomNumber := rand.Intn(2)
+						if blockIndex%2 == 0 {
+							finalPaletteIndex = stonePaletteIndex
+						} else {
+							finalPaletteIndex = granitePaletteIndex
+						}
 					} else {
 						finalPaletteIndex = airPaletteIndex
 					}
