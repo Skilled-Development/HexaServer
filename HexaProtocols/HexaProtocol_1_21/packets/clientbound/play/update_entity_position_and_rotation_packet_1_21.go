@@ -4,6 +4,7 @@ package play
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type UpdatePositionAndRotationPacket_1_21 struct {
@@ -106,7 +107,7 @@ func NewUpdatePositionAndRotationPacket_1_21(entityID int32, deltaX int16, delta
 	}
 }
 
-func ReadUpdatePositionAndRotationPacket_1_21(packet *packets.PacketReader) (*UpdatePositionAndRotationPacket_1_21, bool) {
+func ReadUpdatePositionAndRotationPacket_1_21(packet *packet_utils.PacketReader) (*UpdatePositionAndRotationPacket_1_21, bool) {
 	entityID, err := packet.ReadVarInt()
 	if err != nil {
 		return &UpdatePositionAndRotationPacket_1_21{}, false
@@ -150,8 +151,10 @@ func ReadUpdatePositionAndRotationPacket_1_21(packet *packets.PacketReader) (*Up
 	}, true
 }
 
-func (p UpdatePositionAndRotationPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p UpdatePositionAndRotationPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(p.EntityID)
 	packet.WriteShort(p.DeltaX)

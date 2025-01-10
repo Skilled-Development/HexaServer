@@ -3,6 +3,7 @@ package serverbound
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type ConfirmTeleportation_1_21 struct {
@@ -39,7 +40,7 @@ func NewConfirmTeleportation_1_21(teleportID int32) ConfirmTeleportation_1_21 {
 	}
 }
 
-func ReadConfirmTeleportation_1_21(packet packets.PacketReader) ConfirmTeleportation_1_21 {
+func ReadConfirmTeleportation_1_21(packet packet_utils.PacketReader) ConfirmTeleportation_1_21 {
 	teleportID, err := packet.ReadVarInt()
 	if err != nil {
 		return ConfirmTeleportation_1_21{}
@@ -58,8 +59,10 @@ func (p ConfirmTeleportation_1_21) GetTeleportId() int32 {
 	return p.TeleportID
 }
 
-func (p ConfirmTeleportation_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p ConfirmTeleportation_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(p.TeleportID)
 

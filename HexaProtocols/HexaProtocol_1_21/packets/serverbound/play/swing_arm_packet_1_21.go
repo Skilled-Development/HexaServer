@@ -4,6 +4,7 @@ package serverbound
 import (
 	player "HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type SwingArmPacket_1_21 struct {
@@ -48,7 +49,7 @@ func NewSwingArmPacket_1_21(hand player.Hand) SwingArmPacket_1_21 {
 	}
 }
 
-func ReadSwingArmPacket_1_21(packet packets.PacketReader) (SwingArmPacket_1_21, bool) {
+func ReadSwingArmPacket_1_21(packet packet_utils.PacketReader) (SwingArmPacket_1_21, bool) {
 	hand, err := packet.ReadVarInt()
 	if err != nil {
 		return SwingArmPacket_1_21{}, false
@@ -63,8 +64,10 @@ func ReadSwingArmPacket_1_21(packet packets.PacketReader) (SwingArmPacket_1_21, 
 	}, true
 }
 
-func (p SwingArmPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p SwingArmPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(int32(p.Hand))
 

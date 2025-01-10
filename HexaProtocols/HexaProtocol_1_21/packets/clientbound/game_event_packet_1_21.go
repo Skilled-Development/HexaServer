@@ -101,8 +101,10 @@ func (p *GameEventPacket_1_21) SetValue(value float32) {
 	p.Value = value
 }
 
-func (p *GameEventPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *GameEventPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteByte(byte(p.Event))
 	packet.WriteFloat(p.Value)

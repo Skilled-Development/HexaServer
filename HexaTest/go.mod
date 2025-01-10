@@ -15,6 +15,7 @@ require (
 require (
 	HexaProtocol_1_21 v0.0.0-00010101000000-000000000000 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
+	github.com/ojrac/opensimplex-go v1.0.2 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
 	github.com/tklauser/numcpus v0.8.0 // indirect

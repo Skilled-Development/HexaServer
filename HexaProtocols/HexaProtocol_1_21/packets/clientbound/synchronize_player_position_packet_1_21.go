@@ -3,8 +3,10 @@ package clientbound
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
-	"crypto/rand"
-	"encoding/binary"
+	"math/rand"
+
+	//"crypto/rand"
+	"time"
 )
 
 type SyncPositionFlag byte
@@ -25,6 +27,8 @@ func CreateFlags(flags ...SyncPositionFlag) byte {
 	}
 	return result
 }
+
+/*
 func GenerateRandomTeleportID() int32 {
 	var b [4]byte
 	_, err := rand.Read(b[:])
@@ -32,6 +36,11 @@ func GenerateRandomTeleportID() int32 {
 		panic(err) // handle error appropriately in production code
 	}
 	return int32(binary.LittleEndian.Uint32(b[:]))
+}*/
+
+func GenerateRandomTeleportID() int32 {
+	rand.Seed(time.Now().UnixNano()) // Seed the random number generator
+	return rand.Int31()
 }
 
 type SynchronizePlayerPositionPacket_1_21 struct {
@@ -102,8 +111,10 @@ func NewSynchronizePlayerPositionPacketFromPlayer_1_21(p player.Player, flags by
 	}
 }
 
-func (p *SynchronizePlayerPositionPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *SynchronizePlayerPositionPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 
 	packet.WriteDouble(p.X)

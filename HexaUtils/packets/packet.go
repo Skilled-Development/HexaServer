@@ -2,6 +2,7 @@ package packets
 
 import (
 	"HexaUtils/entities/player"
+	"HexaUtils/packets/utils"
 	"fmt"
 	"time"
 )
@@ -67,13 +68,16 @@ func (p *Packet) GetLogMessage() string {
 
 func (p *Packet) Build() []byte {
 	buffer := p.GetPacketBuffer()
-	packet_length := len(buffer)
-	otherWriter := NewPacketWriter()
-	otherWriter.WriteVarInt(int32(packet_length))
-	otherWriter.buffer = append(otherWriter.buffer, buffer...)
-	return otherWriter.buffer
-}
+	packetLength := len(buffer)
 
+	otherWriter := utils.NewPacketWriter()
+	otherWriter.WriteVarInt(int32(packetLength))
+	otherBuffer := otherWriter.GetPacketBuffer()
+	finalBuffer := make([]byte, 0, len(otherBuffer)+len(buffer))
+	finalBuffer = append(finalBuffer, otherBuffer...)
+	finalBuffer = append(finalBuffer, buffer...)
+	return finalBuffer
+}
 func (p *Packet) Send(pl player.Player) {
 	// Obtener la conexión del jugador
 	conn := pl.GetConn()

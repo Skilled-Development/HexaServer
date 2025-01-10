@@ -2,6 +2,7 @@ package player
 
 import (
 	utils_entities "HexaUtils/entities"
+	packet_utils "HexaUtils/packets/utils"
 	"net"
 
 	"github.com/google/uuid"
@@ -56,4 +57,5 @@ type Player interface {
 	IsSneaking() bool
 	SetSprinting(sprinting bool)
 	IsSprinting() bool
+	GetPacketWritter() *packet_utils.PacketWriter
 }

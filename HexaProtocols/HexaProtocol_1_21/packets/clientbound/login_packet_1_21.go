@@ -90,8 +90,10 @@ func generateHashedSeed() int64 {
 	return hashedSeed
 }
 
-func (p *PlayPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *PlayPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))   // packet id
 	packet.WriteInt(int32(p.GetEntityId())) // entity id
 	packet.WriteBoolean(p.IsHardcore())     // hardcore

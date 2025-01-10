@@ -3,6 +3,7 @@ package serverbound
 import (
 	player "HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type ActionID int
@@ -81,7 +82,7 @@ func NewPlayerCommandPacket_1_21(entityID int32, actionID ActionID, jumpBoost in
 	}
 }
 
-func ReadPlayerCommandPacket_1_21(packet *packets.PacketReader) (PlayerCommandPacket_1_21, bool) {
+func ReadPlayerCommandPacket_1_21(packet *packet_utils.PacketReader) (PlayerCommandPacket_1_21, bool) {
 	entityID, err := packet.ReadVarInt()
 	if err != nil {
 		return PlayerCommandPacket_1_21{}, false
@@ -106,8 +107,10 @@ func ReadPlayerCommandPacket_1_21(packet *packets.PacketReader) (PlayerCommandPa
 	}, true
 }
 
-func (p PlayerCommandPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p PlayerCommandPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(p.EntityID)
 	packet.WriteVarInt(int32(p.ActionID))
 	packet.WriteVarInt(p.JumpBoost)

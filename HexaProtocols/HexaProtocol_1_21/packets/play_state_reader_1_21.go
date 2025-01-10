@@ -8,7 +8,7 @@ import (
 	entities_manager "HexaServer/entities/manager"
 	"HexaUtils/entities"
 	"HexaUtils/entities/player"
-	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 	config "HexaUtils/server/config"
 )
 
@@ -61,15 +61,15 @@ func handle_serverbound_swing_arm_packet(playerP player.Player, p serverbound_pl
 			continue
 		}
 		if other.GetClientState().String() == "Play" && other.IsSeeingEntity(playerP.GetEntityId()) {
-			entity_animation_packet.GetPacket().Send(other)
+			entity_animation_packet.GetPacket(other).Send(other)
 		}
 	}
 }
 
-func ReadPlayStatePacket(server_config *config.ServerConfig, p player.Player, length int32, packet_id int32, pack packets.PacketReader, reader *PlayerPacketReader_1_21) {
+func ReadPlayStatePacket(server_config *config.ServerConfig, p player.Player, length int32, packet_id int32, pack packet_utils.PacketReader, reader *PlayerPacketReader_1_21) {
 	if p.NeedsKeepAlivePacket() {
 		keepAlivePacket := clientbound.NewKeepAlivePlayPacket_1_21(p.GenerateKeepAliveID())
-		keepAlivePacket.GetPacket().Send(p)
+		keepAlivePacket.GetPacket(p).Send(p)
 	}
 	switch packet_id {
 	case 0x00:
@@ -93,7 +93,7 @@ func ReadPlayStatePacket(server_config *config.ServerConfig, p player.Player, le
 
 }
 
-func create_swing_arm_packet(p player.Player, pack packets.PacketReader) {
+func create_swing_arm_packet(p player.Player, pack packet_utils.PacketReader) {
 	swing_arm_packet, ok := serverbound_play.ReadSwingArmPacket_1_21(pack)
 	if !ok {
 		return
@@ -101,7 +101,7 @@ func create_swing_arm_packet(p player.Player, pack packets.PacketReader) {
 	EnqueuePacket(p, swing_arm_packet)
 }
 
-func create_player_command_packet(p player.Player, pack packets.PacketReader) {
+func create_player_command_packet(p player.Player, pack packet_utils.PacketReader) {
 	player_command_packet, ok := serverbound_play.ReadPlayerCommandPacket_1_21(&pack)
 	if !ok {
 		return
@@ -135,7 +135,7 @@ func handle_serverbound_player_command_packet(player player.Player, p serverboun
 				continue
 			}
 			if other.GetClientState().String() == "Play" && other.IsSeeingEntity(player.GetEntityId()) {
-				metadataPacket.GetPacket().Send(other)
+				metadataPacket.GetPacket(other).Send(other)
 			}
 		}
 	case serverbound_play.StopSneaking:
@@ -159,7 +159,7 @@ func handle_serverbound_player_command_packet(player player.Player, p serverboun
 				continue
 			}
 			if other.GetClientState().String() == "Play" && other.IsSeeingEntity(player.GetEntityId()) {
-				metadataPacket.GetPacket().Send(other)
+				metadataPacket.GetPacket(other).Send(other)
 			}
 		}
 	case serverbound_play.StartSprinting:
@@ -170,7 +170,7 @@ func handle_serverbound_player_command_packet(player player.Player, p serverboun
 	}
 }
 
-func create_player_rotation_packet(p player.Player, pack packets.PacketReader) {
+func create_player_rotation_packet(p player.Player, pack packet_utils.PacketReader) {
 	player_rotation_packet, ok := serverbound_play.ReadSetPlayerRotationPacket_1_21(&pack)
 	if !ok {
 		return
@@ -199,13 +199,13 @@ func handle_serverbound_player_rotation_packet(player player.Player, p serverbou
 			continue
 		}
 		if other.GetClientState().String() == "Play" && other.IsSeeingEntity(player.GetEntityId()) {
-			updateEntityRotionPacket.GetPacket().Send(other)
-			updateHeadRotationPacket.GetPacket().Send(other)
+			updateEntityRotionPacket.GetPacket(other).Send(other)
+			updateHeadRotationPacket.GetPacket(other).Send(other)
 		}
 	}
 }
 
-func create_confirm_teleport_packet(p player.Player, pack packets.PacketReader) {
+func create_confirm_teleport_packet(p player.Player, pack packet_utils.PacketReader) {
 	confirm_teleport_packet := serverbound.ReadConfirmTeleportation_1_21(pack)
 	EnqueuePacket(p, confirm_teleport_packet)
 }
@@ -214,13 +214,13 @@ func handle_confirm_teleport_packet(p player.Player, confirm_teleport_packet ser
 	teleportID := confirm_teleport_packet.GetTeleportId()
 	if teleportID != p.GetTeleportID() {
 		disconnectPacket := clientbound.NewDisconnectPacket_1_21(config.ServerConfigInstance.GetInvalidTpIdMessage())
-		disconnectPacket.GetPacket().Send(p)
+		disconnectPacket.GetPacket(p).Send(p)
 		(*p.GetConn()).Close()
 		return
 	}
 }
 
-func create_serverbound_player_position_and_rotation_packet(p player.Player, pack packets.PacketReader) {
+func create_serverbound_player_position_and_rotation_packet(p player.Player, pack packet_utils.PacketReader) {
 	serverbound_player_position_and_rotation_packet, ok := serverbound.ReadServerboundPlayerPositionAndRotation_1_21(pack)
 	if !ok {
 		return
@@ -254,7 +254,8 @@ func handle_serverbound_player_position_and_rotation_packet(p player.Player, ser
 	current_chunk_z := int32(location.Z / 16)
 	if last_chunk_x != current_chunk_x || last_chunk_z != current_chunk_z {
 		set_center_chunk_packet := clientbound.NewSetCenterChunkPacket_1_21(current_chunk_x, current_chunk_z)
-		set_center_chunk_packet.GetPacket().Send(p)
+		set_center_chunk_packet.GetPacket(p).Send(p)
+
 	}
 
 	deltaX := x*4096 - lastX*4096
@@ -275,13 +276,13 @@ func handle_serverbound_player_position_and_rotation_packet(p player.Player, ser
 			continue
 		}
 		if other.GetClientState().String() == "Play" && other.IsSeeingEntity(p.GetEntityId()) {
-			updatePositionPacket.GetPacket().Send(other)
-			updateHeadRotationPacket.GetPacket().Send(other)
+			updatePositionPacket.GetPacket(other).Send(other)
+			updateHeadRotationPacket.GetPacket(other).Send(other)
 		}
 	}
 }
 
-func create_serverbound_keep_alive_packet(p player.Player, pack packets.PacketReader) {
+func create_serverbound_keep_alive_packet(p player.Player, pack packet_utils.PacketReader) {
 	serverbound_keep_alive_packet := serverbound.ReadKeepAlivePlayPacket_1_21(pack)
 	EnqueuePacket(p, serverbound_keep_alive_packet)
 }
@@ -292,14 +293,14 @@ func handle_serverbound_keep_alive_packet(p player.Player, serverbound_keep_aliv
 		/*
 			TODO: Implementar el envío de un paquete de desconexión
 			disconnectPacket := clientbound.NewDisconnectPacket_1_21(config.GetInvalidKeepAliveIdMessage())
-			disconnectPacket.GetPacket().Send(p)
+			disconnectPacket.GetPacket(p).Send(p)
 			time.Sleep(50 * time.Millisecond)*/
 		(*p.GetConn()).Close()
 	}
 
 }
 
-func create_serverbound_player_position_packet(p player.Player, pack packets.PacketReader) {
+func create_serverbound_player_position_packet(p player.Player, pack packet_utils.PacketReader) {
 	serverbound_player_position_packet, ok := serverbound.ReadServerboundPlayerPositionPacket_1_21(pack)
 	if !ok {
 		return
@@ -334,7 +335,7 @@ func handle_serverbound_position_packet(player player.Player, serverboundPlayerP
 			continue
 		}
 		if p.GetClientState().String() == "Play" && p.IsSeeingEntity(player.GetEntityId()) {
-			updatePositionPacket.GetPacket().Send(p)
+			updatePositionPacket.GetPacket(p).Send(p)
 		}
 	}
 

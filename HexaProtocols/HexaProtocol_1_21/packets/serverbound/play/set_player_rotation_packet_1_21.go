@@ -4,6 +4,7 @@ package serverbound
 import (
 	player "HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type SetPlayerRotationPacket_1_21 struct {
@@ -68,7 +69,7 @@ func NewSetPlayerRotationPacket_1_21(yaw float32, pitch float32, onGround bool) 
 	}
 }
 
-func ReadSetPlayerRotationPacket_1_21(packet *packets.PacketReader) (SetPlayerRotationPacket_1_21, bool) {
+func ReadSetPlayerRotationPacket_1_21(packet *packet_utils.PacketReader) (SetPlayerRotationPacket_1_21, bool) {
 	yaw, err := packet.ReadFloat()
 	if err != nil {
 		return SetPlayerRotationPacket_1_21{}, false
@@ -92,8 +93,10 @@ func ReadSetPlayerRotationPacket_1_21(packet *packets.PacketReader) (SetPlayerRo
 	}, true
 }
 
-func (p SetPlayerRotationPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p SetPlayerRotationPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteFloat(p.Yaw)
 	packet.WriteFloat(p.Pitch)

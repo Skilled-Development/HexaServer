@@ -6,7 +6,8 @@ import (
 )
 
 type Packet_1_21 interface {
-	GetPacket() *packets.Packet
+	//GetPacket() *packets.Packet
+	GetPacket(p player.Player) *packets.Packet
 }
 
 type QueuedPacket struct {

@@ -3,6 +3,7 @@ package serverbound
 import (
 	player "HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type KeepAlivePlayPacket_1_21 struct {
@@ -31,7 +32,7 @@ func NewKeepAlivePlayPacket_1_21(keepAliveID int64) *KeepAlivePlayPacket_1_21 {
 	}
 }
 
-func ReadKeepAlivePlayPacket_1_21(packet packets.PacketReader) KeepAlivePlayPacket_1_21 {
+func ReadKeepAlivePlayPacket_1_21(packet packet_utils.PacketReader) KeepAlivePlayPacket_1_21 {
 	keepAliveID, err := packet.ReadLong()
 	if err != nil {
 		keepAliveID = 0
@@ -61,8 +62,10 @@ func (p *KeepAlivePlayPacket_1_21) IsServerBound() bool {
 	return p.ServerBoundPacket
 }
 
-func (p KeepAlivePlayPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p KeepAlivePlayPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteLong(p.KeepAliveID)
 	real_packet := packets.NewPacket(p.PacketID,

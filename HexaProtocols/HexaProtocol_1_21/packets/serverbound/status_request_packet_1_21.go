@@ -21,8 +21,10 @@ func NewStatusRequestPacket_1_21() *StatusRequestPacket_1_21 {
 	}
 }
 
-func (p *StatusRequestPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *StatusRequestPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	real_packet := packets.NewPacket(p.PacketID,
 		p.ProtocolVersion,

@@ -114,8 +114,10 @@ func (p *PlayerInfoUpdatePacket_1_21) SetPlayers(players []PlayerInfoEntry) {
 	p.Players = players
 }
 
-func (p *PlayerInfoUpdatePacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *PlayerInfoUpdatePacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteByte(byte(p.Actions))
 	packet.WriteVarInt(p.NumberOfPlayers)

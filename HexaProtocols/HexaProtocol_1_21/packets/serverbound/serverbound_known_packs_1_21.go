@@ -42,7 +42,7 @@ func NewServerboundKnownPacks_1_21(packs []packetutils.KnownPack) *ServerboundKn
 	}
 }
 
-func ReadServerboundKnownPacks_1_21(packet *packets.PacketReader) *ServerboundKnownPacks_1_21 {
+func ReadServerboundKnownPacks_1_21(packet *packetutils.PacketReader) *ServerboundKnownPacks_1_21 {
 	knownPacksCount, err := packet.ReadVarInt()
 	if err != nil {
 		return nil
@@ -73,8 +73,10 @@ func ReadServerboundKnownPacks_1_21(packet *packets.PacketReader) *ServerboundKn
 	}
 }
 
-func (p *ServerboundKnownPacks_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *ServerboundKnownPacks_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(int32(p.KnownPacksCount))
 	for _, pack := range p.KnownPacks {

@@ -31,8 +31,10 @@ func (p *KeepAlivePlayPacket_1_21) SetKeepAliveID(keepAliveID int64) {
 	p.KeepAliveID = keepAliveID
 }
 
-func (p *KeepAlivePlayPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *KeepAlivePlayPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteLong(p.KeepAliveID)
 	real_packet := packets.NewPacket(p.PacketID,

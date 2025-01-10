@@ -5,6 +5,7 @@ import (
 	"HexaUtils/entities/player"
 	"HexaUtils/nbt"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 	"HexaUtils/regionreader"
 	"HexaUtils/registries"
 	debugger "HexaUtils/utils"
@@ -50,7 +51,7 @@ func NewChunkDataAndUpdateLightPacket_1_21_FromChunkStruct(
 		blockEntitiesCount = int32(len(chunk.BlockEntities))
 		debugger.PrintForDebug("Block Entities Count: %d", blockEntitiesCount)
 		for _, blockEntity := range chunk.BlockEntities {
-			blockEntityPacketWriter := packets.NewPacketWriter()
+			blockEntityPacketWriter := packet_utils.NewPacketWriter()
 			packet_xz := ((blockEntity.X & 15) << 4) | (blockEntity.Z & 15)
 			blockEntityPacketWriter.WriteUnsignedByte(uint8(packet_xz))
 			blockEntityPacketWriter.WriteShort(int16(blockEntity.Y))
@@ -432,7 +433,7 @@ func createBlockLightArray() []byte {
 
 func (p *ChunkDataAndUpdateLightPacket_1_21) GetPacket() *packets.Packet {
 	dataSize := len(p.Data)
-	packet := packets.NewPacketWriter()
+	packet := packet_utils.NewPacketWriter()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteInt(p.ChunkX)
 	packet.WriteInt(p.ChunkZ)

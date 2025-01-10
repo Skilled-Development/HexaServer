@@ -3,6 +3,7 @@ package serverbound
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type PluginMessageConfigurationPacket_1_21 struct {
@@ -32,7 +33,7 @@ func NewPluginMessageConfigurationPacket_1_21(ChannelIdentifier string, data []b
 		Data:              data,
 	}
 }
-func ReadPluginMessageConfigurationPacket_1_21(packet *packets.PacketReader) *PluginMessageConfigurationPacket_1_21 {
+func ReadPluginMessageConfigurationPacket_1_21(packet *packet_utils.PacketReader) *PluginMessageConfigurationPacket_1_21 {
 	channel_identifier, err := packet.ReadIdentifier()
 	if err != nil {
 		return nil
@@ -46,8 +47,10 @@ func ReadPluginMessageConfigurationPacket_1_21(packet *packets.PacketReader) *Pl
 	}
 	return NewPluginMessageConfigurationPacket_1_21(channel_identifier, data)
 }
-func (p *PluginMessageConfigurationPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *PluginMessageConfigurationPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteString(p.ChannelIdentifier)
 	packet.WriteByteArray(p.Data)

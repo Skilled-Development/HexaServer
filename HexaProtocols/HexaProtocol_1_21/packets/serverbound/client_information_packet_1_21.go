@@ -3,6 +3,7 @@ package serverbound
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type ClientInformationPacket_1_21 struct {
@@ -37,7 +38,7 @@ func NewClientInformationPacket_1_21(locale string, viewDistance byte, chatMode 
 	}
 }
 
-func ReadClientInformationPacket_1_21(packet *packets.PacketReader) *ClientInformationPacket_1_21 {
+func ReadClientInformationPacket_1_21(packet *packet_utils.PacketReader) *ClientInformationPacket_1_21 {
 	locale, err := packet.ReadString()
 	if err != nil {
 		return nil
@@ -137,8 +138,10 @@ func (p *ClientInformationPacket_1_21) SetAllowServerListings(allowServerListing
 	p.AllowServerListings = allowServerListings
 }
 
-func (p *ClientInformationPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *ClientInformationPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteString(p.Locale)
 	packet.WriteByte(p.ViewDistance)

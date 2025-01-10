@@ -41,8 +41,10 @@ func (p *SetCenterChunkPacket_1_21) SetChunkZ(chunkZ int32) {
 	p.ChunkZ = chunkZ
 }
 
-func (p *SetCenterChunkPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *SetCenterChunkPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(p.ChunkX)
 	packet.WriteVarInt(p.ChunkZ)

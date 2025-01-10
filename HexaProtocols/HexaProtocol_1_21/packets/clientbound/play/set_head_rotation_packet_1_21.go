@@ -3,6 +3,7 @@ package play
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type SetHeadRotationPacket_1_21 struct {
@@ -56,7 +57,7 @@ func NewSetHeadRotationPacket_1_21(entityID int32, headYaw byte) SetHeadRotation
 	}
 }
 
-func ReadSetHeadRotationPacket_1_21(packet *packets.PacketReader) (*SetHeadRotationPacket_1_21, bool) {
+func ReadSetHeadRotationPacket_1_21(packet *packet_utils.PacketReader) (*SetHeadRotationPacket_1_21, bool) {
 	entityID, err := packet.ReadVarInt()
 	if err != nil {
 		return &SetHeadRotationPacket_1_21{}, false
@@ -75,8 +76,10 @@ func ReadSetHeadRotationPacket_1_21(packet *packets.PacketReader) (*SetHeadRotat
 	}, true
 }
 
-func (p SetHeadRotationPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p SetHeadRotationPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(p.EntityID)
 	packet.WriteAngle(p.HeadYaw)

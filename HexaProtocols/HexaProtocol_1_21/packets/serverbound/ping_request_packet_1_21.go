@@ -3,6 +3,7 @@ package serverbound
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type PingRequestPacket_1_21 struct {
@@ -23,7 +24,7 @@ func NewPingRequestPacket_1_21(timestamp int64) *PingRequestPacket_1_21 {
 	}
 }
 
-func ReadPingRequestPacket_1_21(packet *packets.PacketReader) *PingRequestPacket_1_21 {
+func ReadPingRequestPacket_1_21(packet *packet_utils.PacketReader) *PingRequestPacket_1_21 {
 	timestamp, err := packet.ReadLong()
 	if err != nil {
 		return nil
@@ -35,8 +36,10 @@ func (p *PingRequestPacket_1_21) GetTimestamp() int64 {
 	return p.Timestamp
 }
 
-func (p *PingRequestPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *PingRequestPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteLong(p.Timestamp)
 	real_packet := packets.NewPacket(p.PacketID,

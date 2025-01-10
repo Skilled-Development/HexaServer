@@ -4,6 +4,7 @@ import (
 	"HexaProtocol_1_21/entities"
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 
 	"github.com/google/uuid"
 )
@@ -168,7 +169,7 @@ func NewSpawnEntityPacket_1_21(entityID int32, entityUUID uuid.UUID, entityType 
 	}
 }
 
-func ReadSpawnEntityPacket_1_21(packet *packets.PacketReader) (*SpawnEntityPacket_1_21, bool) {
+func ReadSpawnEntityPacket_1_21(packet *packet_utils.PacketReader) (*SpawnEntityPacket_1_21, bool) {
 	entityID, err := packet.ReadVarInt()
 	if err != nil {
 		return &SpawnEntityPacket_1_21{}, false
@@ -242,8 +243,10 @@ func ReadSpawnEntityPacket_1_21(packet *packets.PacketReader) (*SpawnEntityPacke
 	}, true
 }
 
-func (p SpawnEntityPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p SpawnEntityPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(p.EntityID)
 	packet.WriteUUID(p.EntityUUID)

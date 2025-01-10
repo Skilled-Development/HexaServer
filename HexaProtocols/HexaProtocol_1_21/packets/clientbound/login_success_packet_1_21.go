@@ -3,6 +3,7 @@ package clientbound
 import (
 	player "HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 
 	"github.com/google/uuid"
 )
@@ -16,7 +17,7 @@ type LoginSuccessPacket_1_21 struct {
 	Username          string
 	//TODO: add properties
 	StrictErrorHandling bool
-	Writer              *packets.PacketWriter
+	Writer              *packet_utils.PacketWriter
 }
 
 func NewLoginSuccessPacket_1_21(uuid uuid.UUID, username string, errrorhandling bool) *LoginSuccessPacket_1_21 {
@@ -31,8 +32,10 @@ func NewLoginSuccessPacket_1_21(uuid uuid.UUID, username string, errrorhandling 
 		StrictErrorHandling: errrorhandling,
 	}
 }
-func (p *LoginSuccessPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *LoginSuccessPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteUUID(p.UUID)
 	packet.WriteString(p.Username)

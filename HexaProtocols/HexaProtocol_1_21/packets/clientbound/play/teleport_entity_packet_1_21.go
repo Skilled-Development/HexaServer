@@ -4,6 +4,7 @@ package play
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type TeleportEntityPacket_1_21 struct {
@@ -108,7 +109,7 @@ func NewTeleportEntityPacket_1_21(entityID int32, x float64, y float64, z float6
 	}
 }
 
-func ReadTeleportEntityPacket_1_21(packet *packets.PacketReader) (TeleportEntityPacket_1_21, bool) {
+func ReadTeleportEntityPacket_1_21(packet *packet_utils.PacketReader) (TeleportEntityPacket_1_21, bool) {
 	entityID, err := packet.ReadVarInt()
 	if err != nil {
 		return TeleportEntityPacket_1_21{}, false
@@ -152,8 +153,10 @@ func ReadTeleportEntityPacket_1_21(packet *packets.PacketReader) (TeleportEntity
 	}, true
 }
 
-func (p TeleportEntityPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p TeleportEntityPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(p.EntityID)
 	packet.WriteDouble(p.X)

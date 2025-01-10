@@ -3,6 +3,7 @@ package play
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 
 	"github.com/google/uuid"
 )
@@ -49,7 +50,7 @@ type MetadataEntry struct {
 	Value interface{}
 }
 
-func ReadMetadataEntry(packet *packets.PacketReader) (*MetadataEntry, bool) {
+func ReadMetadataEntry(packet *packet_utils.PacketReader) (*MetadataEntry, bool) {
 	index, err := packet.ReadUnsignedByte()
 	if err != nil {
 		return nil, false
@@ -398,7 +399,7 @@ func ReadMetadataEntry(packet *packets.PacketReader) (*MetadataEntry, bool) {
 	}, true
 }
 
-func (entry *MetadataEntry) Write(packet *packets.PacketWriter) {
+func (entry *MetadataEntry) Write(packet *packet_utils.PacketWriter) {
 	packet.WriteUnsignedByte(uint8(entry.Index))
 	if entry.Index == 0xff {
 		return
@@ -583,7 +584,7 @@ func NewSetEntityMetadataPacket_1_21(entityID int32, metadata []*MetadataEntry) 
 	}
 }
 
-func ReadSetEntityMetadataPacket_1_21(packet *packets.PacketReader) (*SetEntityMetadataPacket_1_21, bool) {
+func ReadSetEntityMetadataPacket_1_21(packet *packet_utils.PacketReader) (*SetEntityMetadataPacket_1_21, bool) {
 	entityID, err := packet.ReadVarInt()
 	if err != nil {
 		return &SetEntityMetadataPacket_1_21{}, false
@@ -610,8 +611,10 @@ func ReadSetEntityMetadataPacket_1_21(packet *packets.PacketReader) (*SetEntityM
 	}, true
 }
 
-func (p SetEntityMetadataPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p SetEntityMetadataPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(p.EntityID)
 

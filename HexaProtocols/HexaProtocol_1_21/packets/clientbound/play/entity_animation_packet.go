@@ -3,6 +3,7 @@ package play
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type AnimationID int
@@ -67,7 +68,7 @@ func NewEntityAnimationPacket_1_21(entityID int32, animation AnimationID) Entity
 	}
 }
 
-func ReadEntityAnimationPacket_1_21(packet *packets.PacketReader) (*EntityAnimationPacket_1_21, bool) {
+func ReadEntityAnimationPacket_1_21(packet *packet_utils.PacketReader) (*EntityAnimationPacket_1_21, bool) {
 	entityID, err := packet.ReadVarInt()
 	if err != nil {
 		return &EntityAnimationPacket_1_21{}, false
@@ -86,8 +87,10 @@ func ReadEntityAnimationPacket_1_21(packet *packets.PacketReader) (*EntityAnimat
 	}, true
 }
 
-func (p EntityAnimationPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p EntityAnimationPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteVarInt(p.EntityID)
 	packet.WriteUnsignedByte(uint8(p.Animation))

@@ -41,8 +41,10 @@ func (p *ClientboundPluginMessagePacket_1_21) SetData(data []byte) {
 	p.Data = data
 }
 
-func (p *ClientboundPluginMessagePacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *ClientboundPluginMessagePacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteString(p.ChannelIdentifier)
 	packet.WriteByteArray(p.Data)

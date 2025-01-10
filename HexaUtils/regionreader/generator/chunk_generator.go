@@ -44,8 +44,19 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 			chunk.Heightmaps["WORLD_SURFACE"][x+z*16] = height
 		}
 	}
+	// 4. Initialize Simplex Noise
+	noise := NewPerlinNoise()
 
-	// 4. Iterate through Vertical Sections (Y)
+	// Populate the hashmap with x, z as keys and y as value
+	stoneBlockState := &regionreader.BlockState{
+		Name: "minecraft:stone",
+	}
+
+	airBlockState := &regionreader.BlockState{
+		Name: "minecraft:air",
+	}
+
+	// 5. Iterate through Vertical Sections (Y)
 	for sectionY := int32(-4); sectionY < 20; sectionY++ {
 		section := &regionreader.Section{
 			Y: byte(sectionY),
@@ -61,7 +72,19 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 			SkyLight:   []byte{},
 		}
 
-		// 5. Iterate through Blocks within the Section (Y, Z, X)
+		// Add stone to the palette if it's not there yet
+		if !containsBlockState(section.BlockStates.Palette, stoneBlockState) {
+			section.BlockStates.Palette = append(section.BlockStates.Palette, stoneBlockState)
+		}
+		stonePaletteIndex := indexOfBlockState(section.BlockStates.Palette, stoneBlockState)
+
+		// Add air to the palette if it's not there yet
+		if !containsBlockState(section.BlockStates.Palette, airBlockState) {
+			section.BlockStates.Palette = append(section.BlockStates.Palette, airBlockState)
+		}
+		airPaletteIndex := indexOfBlockState(section.BlockStates.Palette, airBlockState)
+
+		// 6. Iterate through Blocks within the Section (Y, Z, X)
 		blockIndex := 0
 		currentInt := int64(0)
 		bitOffset := 0
@@ -71,58 +94,24 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 				for x := int32(0); x < 16; x++ {
 
 					//World block y position
-					realX := (chunkX * 16) + x
-					realY := (sectionY * 16) + y
-					realZ := (chunkZ * 16) + z
+					blockY := (sectionY * 16) + y
 
-					//randomNumber := rand.Intn(2)
+					// 7. Calculate Noise Value
+					noiseValue := noise.Sample2D(float64(chunkX*16+x)/20, float64(chunkZ*16+z)/20)
+					surfaceY := int(float64(100) + (noiseValue * 30))
 
-					/*if sectionY == 5 {
+					// 8. Determine Block Type based on Noise
+					var finalPaletteIndex int
 
-						if blockY > 10+(5*16) && blockY <= 15+(5*16) {
-							grassBlockState := &regionreader.BlockState{
-								Name: "minecraft:dirt",
-							}
-							if !containsBlockState(section.BlockStates.Palette, grassBlockState) {
-								if chunkX == 0 && chunkZ == 0 {
-									println("Adding dirt state to palette")
-								}
-								section.BlockStates.Palette = append(section.BlockStates.Palette, grassBlockState)
-							}
-							paletteIndex = indexOfBlockState(section.BlockStates.Palette, grassBlockState)
-
-						} else if blockY >= 5+(5*16) && blockY <= 10+(5*16) {
-							grassBlockState := &regionreader.BlockState{
-								Name: "minecraft:stone",
-							}
-							if !containsBlockState(section.BlockStates.Palette, grassBlockState) {
-								if chunkX == 0 && chunkZ == 0 {
-									println("Adding stone state to palette")
-								}
-								section.BlockStates.Palette = append(section.BlockStates.Palette, grassBlockState)
-							}
-							paletteIndex = indexOfBlockState(section.BlockStates.Palette, grassBlockState)
-
-						}  else {
-							graniteBlockState := &regionreader.BlockState{
-								Name: "minecraft:granite",
-							}
-							if !containsBlockState(section.BlockStates.Palette, graniteBlockState) {
-								if chunkX == 0 && chunkZ == 0 {
-									println("Adding granite state to palette")
-								}
-								section.BlockStates.Palette = append(section.BlockStates.Palette, graniteBlockState)
-							}
-							paletteIndex = indexOfBlockState(section.BlockStates.Palette, graniteBlockState)
-
-						}
-
+					// If the noise is above this threshold, place stone
+					if int(surfaceY) > int(blockY) {
+						finalPaletteIndex = stonePaletteIndex
 					} else {
-						paletteIndex = 0
-					}*/
+						finalPaletteIndex = airPaletteIndex
+					}
 
 					// Pack the palette index into the current int64
-					currentInt |= int64(paletteIndex) << bitOffset
+					currentInt |= int64(finalPaletteIndex) << bitOffset
 					bitOffset += 4
 
 					// If the current int64 is full, store it and reset

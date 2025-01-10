@@ -2,7 +2,7 @@ package packets
 
 import (
 	"HexaUtils/entities/player"
-	packetutils "HexaUtils/packets"
+	packetutils "HexaUtils/packets/utils"
 	config "HexaUtils/server/config"
 	"fmt"
 )

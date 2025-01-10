@@ -4,7 +4,7 @@ import (
 	protocol_1_21 "HexaProtocol_1_21/packets"
 	"HexaServer/entities/player"
 	utils_player "HexaUtils/entities/player"
-	hexapackets "HexaUtils/packets"
+	hexapacket_utils "HexaUtils/packets/utils"
 	config "HexaUtils/server/config"
 	"fmt"
 	"log"
@@ -22,7 +22,7 @@ func NewPlayerPacketReader() *PlayerPacketReader {
 	}
 }
 
-func (r *PlayerPacketReader) ReadPlayerPacket(packetReader *hexapackets.PacketReader, player *player.Player, server_config *config.ServerConfig) {
+func (r *PlayerPacketReader) ReadPlayerPacket(packetReader *hexapacket_utils.PacketReader, player *player.Player, server_config *config.ServerConfig) {
 	playerProtocolVersion := player.GetProtocolVersion()
 	if playerProtocolVersion == 0 {
 		r.readHandshakePacket(player, packetReader)
@@ -33,7 +33,7 @@ func (r *PlayerPacketReader) ReadPlayerPacket(packetReader *hexapackets.PacketRe
 		}
 	}
 }
-func (r *PlayerPacketReader) readHandshakePacket(p *player.Player, packetReader *hexapackets.PacketReader) {
+func (r *PlayerPacketReader) readHandshakePacket(p *player.Player, packetReader *hexapacket_utils.PacketReader) {
 	conn := p.Conn
 	length, err := packetReader.ReadVarInt()
 	if err != nil {

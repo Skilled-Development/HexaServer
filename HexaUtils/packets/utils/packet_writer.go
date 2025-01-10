@@ -1,4 +1,4 @@
-package packets
+package utils
 
 import (
 	"HexaUtils/nbt"
@@ -11,6 +11,21 @@ import (
 // PacketWriter es un escritor de paquetes que usa un arreglo de bytes.
 type PacketWriter struct {
 	buffer []byte
+}
+
+// NewPacketWriter crea un nuevo escritor de paquetes con un buffer vacío.
+// If initialSize is provided the buffer is pre-allocated
+func NewPacketWriter(initialSize ...int) *PacketWriter {
+	size := 0
+	if len(initialSize) > 0 {
+		size = initialSize[0]
+	}
+	return &PacketWriter{buffer: make([]byte, 0, size)}
+}
+
+// Reset clears the buffer and sets it to the initial pre-allocated size
+func (w *PacketWriter) Reset() {
+	w.buffer = w.buffer[:0] // Efficiently truncate the slice
 }
 
 func NewPacketWriterFromBuffer(buffer []byte) *PacketWriter {
@@ -64,53 +79,65 @@ func (w *PacketWriter) WriteUUID(uuid uuid.UUID) error {
 	return nil
 }
 
-// NewPacketWriter crea un nuevo escritor de paquetes con un buffer vacío.
-func NewPacketWriter() *PacketWriter {
-	return &PacketWriter{buffer: []byte{}}
-}
-
-// WriteByte escribe un byte en el buffer.
+// WriteByte writes a byte to the buffer.
 func (w *PacketWriter) WriteByte(b byte) {
 	w.buffer = append(w.buffer, b)
 }
 
-// WriteVarInt escribe un VarInt (int32) en el buffer.
+// WriteBytes writes a byte to the buffer.
+func (w *PacketWriter) WriteBytes(data []byte) {
+	w.buffer = append(w.buffer, data...)
+}
+
+// WriteVarInt writes a VarInt (int32) to the buffer with optimizations, including handling of negative numbers.
 func (w *PacketWriter) WriteVarInt(value int32) {
-	for {
-		b := byte(value & 0x7F)
-		value >>= 7
+	const segmentBits = 0x7F
+	const continueBit = 0x80
 
-		if (value != 0) || (b&0x80 != 0) {
-			b |= 0x80
+	// Pre-allocate a buffer with max size
+	var buffer [5]byte
+	i := 0
+	for {
+		// We perform & 0x7F to keep the last 7 bits.
+		b := byte(value & segmentBits)
+		// The right shift is done without sign extension to treat as an unsigned number
+		value = int32(uint32(value) >> 7)
+		// If the value is not zero then more bytes need to be written
+		if value != 0 {
+			// we set the continuation bit if we will continue writing
+			b |= continueBit
 		}
 
-		w.WriteByte(b)
+		buffer[i] = b
+		i++
 
 		if value == 0 {
 			break
 		}
 	}
+	w.buffer = append(w.buffer, buffer[:i]...)
 }
 
-// WriteVarLong escribe un VarLong (int64) en el buffer.
+// WriteVarLong writes a VarLong (int64) to the buffer using index based assignment and appending as needed
 func (w *PacketWriter) WriteVarLong(value int64) {
+	var buffer [10]byte
+	i := 0
 	for {
 		b := byte(value & 0x7F)
 		value >>= 7
-
-		if (value != 0) || (b&0x80 != 0) {
+		if value != 0 {
 			b |= 0x80
 		}
-
-		w.WriteByte(b)
-
-		if value == 0 {
+		buffer[i] = b
+		i++
+		if value == 0 || (value == -1 && b&0x80 != 0) {
 			break
 		}
 	}
+	w.buffer = append(w.buffer, buffer[:i]...)
 }
 
-// WriteString escribe un String en el buffer, con su longitud prefijada como VarInt.
+// WriteString writes a String to the buffer, with its length prefixed as VarInt.
 func (p *PacketWriter) WriteString(value string) *PacketWriter {
 
 	// Convertimos el string a bytes UTF-8
@@ -144,7 +171,7 @@ func (w *PacketWriter) WriteIdentifierWithoutLength(identifier string) {
 	w.buffer = append(w.buffer, bytes...)
 }
 
-// WriteByteArray escribe un arreglo de bytes en el buffer, con su longitud prefijada como VarInt.
+// WriteByteArray writes a byte array to the buffer, with its length prefixed as VarInt.
 func (w *PacketWriter) WriteByteArray(data []byte) {
 	// Escribimos la longitud del arreglo como un VarInt
 	w.WriteVarInt(int32(len(data)))
@@ -198,12 +225,12 @@ func (w *PacketWriter) WriteJson(json string) error {
 	return nil
 }
 
-// WriteUnsignedByte escribe un Unsigned Byte (uint8) en el buffer.
+// WriteUnsignedByte writes an Unsigned Byte (uint8) to the buffer.
 func (w *PacketWriter) WriteUnsignedByte(value uint8) {
 	w.WriteByte(byte(value))
 }
 
-// WriteBoolean escribe un Boolean (bool) en el buffer.
+// WriteBoolean writes a Boolean (bool) to the buffer.
 func (w *PacketWriter) WriteBoolean(value bool) {
 	if value {
 		w.WriteByte(0x01)
@@ -212,19 +239,19 @@ func (w *PacketWriter) WriteBoolean(value bool) {
 	}
 }
 
-// WriteShort escribe un Short (int16) en el buffer.
+// WriteShort writes a Short (int16) to the buffer.
 func (w *PacketWriter) WriteShort(value int16) {
 	w.WriteByte(byte(value >> 8))
 	w.WriteByte(byte(value))
 }
 
-// WriteUnsignedShort escribe un Unsigned Short (uint16) en el buffer.
+// WriteUnsignedShort writes an Unsigned Short (uint16) to the buffer.
 func (w *PacketWriter) WriteUnsignedShort(value uint16) {
 	w.WriteByte(byte(value >> 8))
 	w.WriteByte(byte(value))
 }
 
-// WriteInt escribe un Int (int32) en el buffer.
+// WriteInt writes an Int (int32) to the buffer.
 func (w *PacketWriter) WriteInt(value int32) {
 	w.WriteByte(byte(value >> 24))
 	w.WriteByte(byte(value >> 16))
@@ -232,7 +259,7 @@ func (w *PacketWriter) WriteInt(value int32) {
 	w.WriteByte(byte(value))
 }
 
-// WriteFloat escribe un Float (float32) en el buffer.
+// WriteFloat writes a Float (float32) to the buffer.
 func (w *PacketWriter) WriteFloat(value float32) {
 	bits := math.Float32bits(value)
 	w.WriteByte(byte(bits >> 24))
@@ -241,7 +268,7 @@ func (w *PacketWriter) WriteFloat(value float32) {
 	w.WriteByte(byte(bits))
 }
 
-// WriteDouble escribe un Double (float64) en el buffer.
+// WriteDouble writes a Double (float64) to the buffer.
 func (w *PacketWriter) WriteDouble(value float64) {
 	bits := math.Float64bits(value)
 	w.WriteByte(byte(bits >> 56))
@@ -254,18 +281,18 @@ func (w *PacketWriter) WriteDouble(value float64) {
 	w.WriteByte(byte(bits))
 }
 
-// WritePosition escribe una posición (x, y, z) en el buffer.
+// WritePosition writes a position (x, y, z) to the buffer.
 func (w *PacketWriter) WritePosition(x, y, z int) {
 	position := ((int64(x) & 0x3FFFFFF) << 38) | ((int64(z) & 0x3FFFFFF) << 12) | (int64(y) & 0xFFF)
 	w.WriteLong(position)
 }
 
-// WriteAngle escribe un ángulo en el buffer.
+// WriteAngle writes an angle to the buffer.
 func (w *PacketWriter) WriteAngle(value byte) {
 	w.WriteByte(value)
 }
 
-// WriteBitSet escribe un BitSet en el buffer.
+// WriteBitSet writes a BitSet to the buffer.
 func (w *PacketWriter) WriteBitSet(bitSet []uint64) {
 	w.WriteVarInt(int32(len(bitSet)))
 	for _, long := range bitSet {
@@ -273,31 +300,31 @@ func (w *PacketWriter) WriteBitSet(bitSet []uint64) {
 	}
 }
 
-// WriteFixedBitSet escribe un Fixed BitSet en el buffer.
+// WriteFixedBitSet writes a Fixed BitSet to the buffer.
 func (w *PacketWriter) WriteFixedBitSet(bitSet []byte) {
 	w.buffer = append(w.buffer, bitSet...)
 }
 
-// WriteOptional escribe un valor opcional de tipo T.
+// WriteOptional writes an optional value of type T.
 func (w *PacketWriter) WriteOptional(value interface{}, writeFunc func(interface{})) {
 	if value != nil {
 		writeFunc(value)
 	}
 }
 
-// WriteArray escribe un array de tipo T.
+// WriteArray writes an array of type T.
 func (w *PacketWriter) WriteArray(array []interface{}, writeFunc func(interface{})) {
 	for _, value := range array {
 		writeFunc(value)
 	}
 }
 
-// WriteEnum escribe un valor de enumeración.
+// WriteEnum writes an enumeration value.
 func (w *PacketWriter) WriteEnum(value int, writeFunc func(int)) {
 	writeFunc(value)
 }
 
-// WriteIDOrX escribe un ID o un valor de tipo X.
+// WriteIDOrX writes an ID or a value of type X.
 func (w *PacketWriter) WriteIDOrX(id int, value interface{}, writeValueFunc func(interface{})) {
 	if id == 0 {
 		w.WriteVarInt(int32(0))
@@ -309,7 +336,7 @@ func (w *PacketWriter) WriteIDOrX(id int, value interface{}, writeValueFunc func
 	}
 }
 
-// WriteIDSet escribe un conjunto de IDs.
+// WriteIDSet writes a set of IDs.
 func (w *PacketWriter) WriteIDSet(typeID int, tagName string, ids []int) {
 	w.WriteVarInt(int32(typeID))
 	if typeID == 0 {

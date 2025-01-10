@@ -3,6 +3,7 @@ package serverbound
 import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 
 	"github.com/google/uuid"
 )
@@ -27,7 +28,7 @@ func NewLoginStartPacket_1_21(name string, uuid uuid.UUID) *LoginStartPacket_1_2
 	}
 }
 
-func ReadLoginStartPacket_1_21(packet *packets.PacketReader) *LoginStartPacket_1_21 {
+func ReadLoginStartPacket_1_21(packet *packet_utils.PacketReader) *LoginStartPacket_1_21 {
 	name, err := packet.ReadString()
 	if err != nil {
 		return nil
@@ -47,8 +48,10 @@ func (p *LoginStartPacket_1_21) GetUUID() uuid.UUID {
 	return p.UUID
 }
 
-func (p *LoginStartPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *LoginStartPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteString(p.Username)
 	packet.WriteUUID(p.UUID)

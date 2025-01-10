@@ -17,7 +17,7 @@ func TickEntities(tick int) {
 					byte(other_player.GetLocation().Pitch),
 					other_player.IsOnGround(),
 				)
-				teleportPacket.GetPacket().Send(p)
+				teleportPacket.GetPacket(p).Send(p)
 
 				teleportPacket2 := clientbound_play.NewTeleportEntityPacket_1_21(
 					int32(p.GetEntityId()),

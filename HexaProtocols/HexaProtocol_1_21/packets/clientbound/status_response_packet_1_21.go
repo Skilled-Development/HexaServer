@@ -32,8 +32,10 @@ func (p *StatusResponsePacket) SetMotd(motd config.MOTD) {
 	p.Motd = motd
 }
 
-func (p *StatusResponsePacket) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *StatusResponsePacket) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(0x00)
 	packet.WriteJson((&p.Motd).GetJSON())
 

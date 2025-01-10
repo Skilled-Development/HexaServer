@@ -3,6 +3,7 @@ package serverbound
 import (
 	player "HexaUtils/entities/player"
 	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 )
 
 type ServerboundPlayerPositionPacket_1_21 struct {
@@ -77,7 +78,7 @@ func NewServerboundPlayerPositionPacket_1_21(x float64, feetY float64, z float64
 	}
 }
 
-func ReadServerboundPlayerPositionPacket_1_21(packet packets.PacketReader) (ServerboundPlayerPositionPacket_1_21, bool) {
+func ReadServerboundPlayerPositionPacket_1_21(packet packet_utils.PacketReader) (ServerboundPlayerPositionPacket_1_21, bool) {
 	x, err := packet.ReadDouble()
 	if err != nil {
 		return ServerboundPlayerPositionPacket_1_21{}, false
@@ -106,8 +107,10 @@ func ReadServerboundPlayerPositionPacket_1_21(packet packets.PacketReader) (Serv
 	}, true
 }
 
-func (p ServerboundPlayerPositionPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p ServerboundPlayerPositionPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteDouble(p.X)
 	packet.WriteDouble(p.FeetY)

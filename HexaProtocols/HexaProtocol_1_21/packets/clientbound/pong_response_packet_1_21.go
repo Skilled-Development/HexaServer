@@ -27,8 +27,10 @@ func (p *PongResponsePacket_1_21) GetTimestamp() int64 {
 	return p.Timestamp
 }
 
-func (p *PongResponsePacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *PongResponsePacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 	packet.WriteLong(p.Timestamp)
 

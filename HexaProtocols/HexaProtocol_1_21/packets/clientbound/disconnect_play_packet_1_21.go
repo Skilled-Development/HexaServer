@@ -46,8 +46,10 @@ func NewDisconnectPacket_1_21(reason string) DisconnectPacket_1_21 {
 	}
 }
 
-func (p *DisconnectPacket_1_21) GetPacket() *packets.Packet {
-	packet := packets.NewPacketWriter()
+func (p *DisconnectPacket_1_21) GetPacket(player player.Player) *packets.Packet {
+	//packet := packet_utils.NewPacketWriter()
+	packet := player.GetPacketWritter()
+	packet.Reset()
 	packet.WriteVarInt(int32(p.PacketID))
 
 	// Write TextComponent as NBT

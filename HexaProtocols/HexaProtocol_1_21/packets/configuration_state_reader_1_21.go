@@ -9,14 +9,14 @@ import (
 	"HexaUtils/entities/player"
 	"HexaUtils/packets"
 	packet_utils "HexaUtils/packets/utils"
+	chunk_generator "HexaUtils/regionreader/generator"
 	config "HexaUtils/server/config"
-	"HexaUtils/server/data"
 	debugger "HexaUtils/utils"
 	"fmt"
 	"time"
 )
 
-func ReadConfigurationStatePacket(server_config config.ServerConfig, p player.Player, length int32, packet_id int32, pack *packets.PacketReader) {
+func ReadConfigurationStatePacket(server_config config.ServerConfig, p player.Player, length int32, packet_id int32, pack *packet_utils.PacketReader) {
 	switch packet_id {
 	case 0x00:
 		handle_client_information_packet(p, pack)
@@ -31,55 +31,120 @@ func ReadConfigurationStatePacket(server_config config.ServerConfig, p player.Pl
 	}
 	if !p.ContainsAlreadySendPacket("ClientboundPluginMessage") {
 		clientbound_plugin_message_packet := clientbound.NewClientboundPluginMessagePacket_1_21("minecraft:brand", []byte("HexaServer"))
-		clientbound_plugin_message_packet.GetPacket().Send(p)
+		clientbound_plugin_message_packet.GetPacket(p).Send(p)
 		p.AddAlreadySendPacket("ClientboundPluginMessage")
 	}
 	if !p.ContainsAlreadySendPacket("ClientboundKnownPacks") {
 		kwonwPack := packet_utils.NewKnownPack("minecraft", "core", "1.0.0")
 		kwonwPacks := []packet_utils.KnownPack{*kwonwPack}
 		clientbound_known_packs_packet := clientbound.NewClientboundKnownPacks_1_21(kwonwPacks)
-		clientbound_known_packs_packet.GetPacket().Send(p)
+		clientbound_known_packs_packet.GetPacket(p).Send(p)
 		p.AddAlreadySendPacket("ClientboundKnownPacks")
 	}
 
 }
 
-func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player, pack *packets.PacketReader) {
+func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player, pack *packet_utils.PacketReader) {
 	//TODO: PLAYER JOIN WORLD EVENT
 	p.SetClientState(player.Play)
 	packet := clientbound.NewPlayPacket_1_21(p)
-	packet.GetPacket().Send(p)
+	packet.GetPacket(p).Send(p)
 	synchronize_player_position_packet := clientbound.NewSynchronizePlayerPositionPacketFromPlayer_1_21(p, 0)
-	synchronize_player_position_packet.GetPacket().Send(p)
+	synchronize_player_position_packet.GetPacket(p).Send(p)
 
 	game_event_packet := clientbound.NewGameEventPacket_1_21(clientbound.StartWaitingForLevelChunksEvent, 0)
-	game_event_packet.GetPacket().Send(p)
+	game_event_packet.GetPacket(p).Send(p)
 
 	set_center_chunk_packet := clientbound.NewSetCenterChunkPacket_1_21(0, 1)
-	set_center_chunk_packet.GetPacket().Send(p)
+	set_center_chunk_packet.GetPacket(p).Send(p)
 
 	startTimeSendChunks := time.Now()
 
 	debugger.SetDebugTest(false)
-	for x := -32; x < 32; x++ {
+	//region := data.GetRegionsLoadedList()[0]
+	//loadedChunk, _ := region.ReadChunk(0, 0)
+
+	/*for x := -32; x < 32; x++ {
 		for z := -32; z < 32; z++ {
 			region := data.GetRegionsLoadedList()[0]
 			chunk, _ := region.ReadChunk(x, z)
 			if chunk == nil {
 				continue
 			}
-			/*if len(chunk.BlockEntities) > 0 {
-				debugger.SetDebugTest(true)
-			} else {
-				debugger.SetDebugTest(false)
-			}*/
+			//if len(chunk.BlockEntities) > 0 {
+				//debugger.SetDebugTest(true)
+			//} else {
+			//	debugger.SetDebugTest(false)
+			//}
 			debugger.PrintForDebug("--------------------------------------------------------------------------")
 			debugger.PrintForDebug("Current chunk x:", x, "z:", z)
+			chunkPacket := clientbound.NewChunkDataAndUpdateLightPacket_1_21_FromChunkStruct(chunk, p)
+			chunkPacket.GetPacket(p).Send(p)
+		}
+	}
+	*/
+
+	zero_zero_chunk := chunk_generator.GenerateChunk(0, 0, 0)
+	chunkPacket := clientbound.NewChunkDataAndUpdateLightPacket_1_21_FromChunkStruct(zero_zero_chunk, p)
+	chunkPacket.GetPacket().Send(p)
+
+	/*
+
+		debugger.SetDebugTest(false)*/
+	for x := -10; x < 10; x++ {
+		for y := -10; y < 10; y++ {
+			/*file, err := os.OpenFile("debug.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			if err != nil {
+				fmt.Println("Error opening file:", err)
+				return
+			}
+			defer file.Close()
+			writer := bufio.NewWriter(file)
+			fmt.Fprintln(writer, "GENERATING CHUNK X:", x, "Y:", y)*/
+			if x == 0 && y == 0 {
+				continue
+			}
+			chunk := chunk_generator.GenerateChunk(int32(x), int32(y), 0)
+			/*if x == 0 && y == 0 {
+				fmt.Fprintln(writer, "----------------")
+				fmt.Fprintln(writer, "LOADED CHUNK X POS:", loadedChunk.XPos, "Z POS:", loadedChunk.ZPos, " Y POS:", loadedChunk.YPos)
+				fmt.Fprintln(writer, "GENERATED CHUNK X POS:", chunk.XPos, "Z POS:", chunk.ZPos, " Y POS:", chunk.YPos)
+				fmt.Fprintln(writer, "Example of heigthmaps, for loaded chunk")
+				for key, value := range loadedChunk.Heightmaps {
+					fmt.Fprintln(writer, " - Key:", key, "Value:", value)
+				}
+				fmt.Fprintln(writer, "Example of heigthmaps, for generated chunk")
+				for key, value := range chunk.Heightmaps {
+					fmt.Fprintln(writer, " - Key:", key, "Value:", value)
+				}
+				section := 5
+				fmt.Fprintln(writer, "Example of section", section, "palette for loaded chunk")
+				for key, value := range loadedChunk.Sections[section].BlockStates.Palette {
+					fmt.Fprintln(writer, " - Key:", key, "Value:", value)
+					fmt.Fprintln(writer, "  - BlockState Name:", value.Name)
+					for propKey, propValue := range value.Properties {
+						fmt.Fprintln(writer, "    - Property:", propKey, "Value:", propValue)
+					}
+				}
+				fmt.Fprintln(writer, "Example of section", section, "data for loaded chunk")
+				for key, value := range loadedChunk.Sections[section].BlockStates.Data {
+					fmt.Fprintln(writer, " - Key:", key, "Value:", value)
+
+				}
+				fmt.Fprintln(writer, "Example of section", section, "palette for generated chunk")
+				for key, value := range chunk.Sections[section].BlockStates.Palette {
+					fmt.Fprintln(writer, " - Key:", key, "Value:", value)
+				}
+				fmt.Fprintln(writer, "Example of section", section, "data for generated chunk")
+				for key, value := range chunk.Sections[section].BlockStates.Data {
+					fmt.Fprintln(writer, " - Key:", key, "Value:", value)
+				}
+			}
+			writer.Flush()*/
 			chunkPacket := clientbound.NewChunkDataAndUpdateLightPacket_1_21_FromChunkStruct(chunk, p)
 			chunkPacket.GetPacket().Send(p)
 		}
 	}
-	debugger.SetDebugTest(false)
 	println("Time to send chunks:", time.Since(startTimeSendChunks).Milliseconds(), "ms")
 
 	addPlayerPacket := clientbound.NewPlayerInfoUpdatePacket_1_21(clientbound.AddPlayerAction, []clientbound.PlayerInfoEntry{getPlayerInfoEntry(p)})
@@ -104,8 +169,8 @@ func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player,
 			0,
 			0,
 		)
-		addPlayerPacket.GetPacket().Send(other_player)
-		spawn_player_packet.GetPacket().Send(other_player)
+		addPlayerPacket.GetPacket(other_player).Send(other_player)
+		spawn_player_packet.GetPacket(other_player).Send(other_player)
 		other_player.RemoveSeeingEntity(p.GetEntityId())
 		other_player.AddSeeingEntity(p.GetEntityId())
 
@@ -126,8 +191,8 @@ func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player,
 			0,
 			0,
 		)
-		addOtherPlayerPacket.GetPacket().Send(p)
-		spawn_other_palyer.GetPacket().Send(p)
+		addOtherPlayerPacket.GetPacket(p).Send(p)
+		spawn_other_palyer.GetPacket(p).Send(p)
 		p.RemoveSeeingEntity(other_player.GetEntityId())
 		p.AddSeeingEntity(other_player.GetEntityId())
 		//sendMessage("Player "+p.GetName()+" spawned at "+fmt.Sprintf("%.2f", pLocation.X)+", "+fmt.Sprintf("%.2f", pLocation.Y)+", "+fmt.Sprintf("%.2f", pLocation.Z), other_player)
@@ -147,7 +212,7 @@ func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player,
 				byte(other_player.GetLocation().Pitch),
 				other_player.IsOnGround(),
 			)
-			teleportPacket.GetPacket().Send(p)
+			teleportPacket.GetPacket(p).Send(p)
 
 			teleportPacket2 := clientbound_play.NewTeleportEntityPacket_1_21(
 				int32(p.GetEntityId()),
@@ -158,7 +223,7 @@ func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player,
 				byte(p.GetLocation().Pitch),
 				p.IsOnGround(),
 			)
-			teleportPacket2.GetPacket().Send(other_player)
+			teleportPacket2.GetPacket(other_player).Send(other_player)
 		}
 
 	}()
@@ -167,7 +232,7 @@ func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player,
 
 func sendMessage(s string, p player.Player) {
 	packet := clientbound.NewSystemChatMessagePacket_1_21(s, false)
-	packet.GetPacket().Send(p)
+	packet.GetPacket(p).Send(p)
 }
 
 func getPlayerInfoEntry(p player.Player) clientbound.PlayerInfoEntry {
@@ -193,7 +258,7 @@ func getPlayerInfoEntry(p player.Player) clientbound.PlayerInfoEntry {
 	return player_info_entry
 }
 
-func handle_serverbound_known_packs_packet(p player.Player, pack *packets.PacketReader) {
+func handle_serverbound_known_packs_packet(p player.Player, pack *packet_utils.PacketReader) {
 	serverbound_known_packs_packet := serverbound.ReadServerboundKnownPacks_1_21(pack)
 	if serverbound_known_packs_packet == nil {
 		fmt.Println("Error reading ServerboundKnownPacksPacket")
@@ -207,9 +272,9 @@ func handle_serverbound_known_packs_packet(p player.Player, pack *packets.Packet
 	registryManager := config.RegistriesManagerInstance
 	for _, registry := range registryManager.Registries {
 		registryPacket := clientbound.NewRegistryDataPacket_1_21(registry)
-		registryPacket.GetPacket().Send(p)
+		registryPacket.GetPacket(p).Send(p)
 	}
-	packet := packets.NewPacketWriter()
+	packet := packet_utils.NewPacketWriter()
 	packet.WriteVarInt(int32(0x03))
 	real_packet := packets.NewPacket(0x03,
 		p.GetProtocolVersion(),
@@ -221,7 +286,7 @@ func handle_serverbound_known_packs_packet(p player.Player, pack *packets.Packet
 	real_packet.Send(p)
 }
 
-func handle_client_information_packet(p player.Player, pack *packets.PacketReader) {
+func handle_client_information_packet(p player.Player, pack *packet_utils.PacketReader) {
 	client_information_packet := serverbound.ReadClientInformationPacket_1_21(pack)
 	if client_information_packet == nil {
 		fmt.Println("Error reading ClientInformationPacket")
@@ -237,7 +302,7 @@ func handle_client_information_packet(p player.Player, pack *packets.PacketReade
 	p.SetAllowServerListings(client_information_packet.AllowServerListings)
 }
 
-func handle_serverbound_plugin_message_configuration_packet(pack *packets.PacketReader) {
+func handle_serverbound_plugin_message_configuration_packet(pack *packet_utils.PacketReader) {
 	plugin_message_configuration_packet := serverbound.ReadPluginMessageConfigurationPacket_1_21(pack)
 	if plugin_message_configuration_packet == nil {
 		fmt.Println("Error reading PluginMessageConfigurationPacket")

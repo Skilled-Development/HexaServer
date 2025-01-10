@@ -4,12 +4,12 @@ import (
 	"HexaProtocol_1_21/packets/clientbound"
 	serverbound "HexaProtocol_1_21/packets/serverbound"
 	"HexaUtils/entities/player"
-	"HexaUtils/packets"
+	packet_utils "HexaUtils/packets/utils"
 	config "HexaUtils/server/config"
 	"fmt"
 )
 
-func ReadLoginStatePacket(server_config config.ServerConfig, p player.Player, length int32, packet_id int32, pack *packets.PacketReader) {
+func ReadLoginStatePacket(server_config config.ServerConfig, p player.Player, length int32, packet_id int32, pack *packet_utils.PacketReader) {
 	switch packet_id {
 	case 0x00:
 		handle_login_start_packet(p, pack)
@@ -24,7 +24,7 @@ func handle_login_acknowledged_packet(p player.Player) {
 	p.SetClientState(player.Configuration)
 }
 
-func handle_login_start_packet(p player.Player, pack *packets.PacketReader) {
+func handle_login_start_packet(p player.Player, pack *packet_utils.PacketReader) {
 	login_start_packet := serverbound.ReadLoginStartPacket_1_21(pack)
 	if login_start_packet == nil {
 		return
@@ -40,6 +40,6 @@ func handle_login_start_packet(p player.Player, pack *packets.PacketReader) {
 
 	//login success packet
 	login_sucess_packet := clientbound.NewLoginSuccessPacket_1_21(uuid, username, false)
-	login_sucess_packet.GetPacket().Send(p)
+	login_sucess_packet.GetPacket(p).Send(p)
 
 }

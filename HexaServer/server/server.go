@@ -8,7 +8,7 @@ import (
 	entities_manager "HexaServer/entities/manager"
 	"HexaServer/entities/player"
 	"HexaServer/packet"
-	hexapackets "HexaUtils/packets"
+	hexapackets "HexaUtils/packets/utils"
 	region "HexaUtils/regionreader"
 	"HexaUtils/server/config"
 	data "HexaUtils/server/data"
@@ -261,7 +261,7 @@ var packetPool = sync.Pool{
 func sendMessage(player *player.Player, message string) {
 	packet := packetPool.Get().(*clientbound.SystemChatMessagePacket_1_21)
 	packet.SetContent(message)
-	packet.GetPacket().Send(player)
+	packet.GetPacket(player).Send(player)
 	packetPool.Put(packet)
 }
 func (s *Server) tick(tickNumber int) {
