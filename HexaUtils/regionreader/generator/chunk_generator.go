@@ -45,7 +45,8 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 		}
 	}
 	// 4. Initialize Simplex Noise
-	noise := NewPerlinNoise()
+	//noise := NewPerlinNoise()
+	continentalnesNoise := NewPerlinNoiseOctave(-8, 0.5, 2.0)
 
 	// Populate the hashmap with x, z as keys and y as value
 	stoneBlockState := &regionreader.BlockState{
@@ -58,6 +59,13 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 
 	graniteBlockState := &regionreader.BlockState{
 		Name: "minecraft:granite",
+	}
+
+	waterBlockState := &regionreader.BlockState{
+		Name: "minecraft:water",
+		Properties: map[string]string{
+			"level": "0",
+		},
 	}
 
 	// 5. Iterate through Vertical Sections (Y)
@@ -94,6 +102,11 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 		}
 		granitePaletteIndex := indexOfBlockState(section.BlockStates.Palette, graniteBlockState)
 
+		if !containsBlockState(section.BlockStates.Palette, waterBlockState) {
+			section.BlockStates.Palette = append(section.BlockStates.Palette, waterBlockState)
+		}
+		waterPaletteIndex := indexOfBlockState(section.BlockStates.Palette, waterBlockState)
+
 		// 6. Iterate through Blocks within the Section (Y, Z, X)
 		blockIndex := 0
 		currentInt := int64(0)
@@ -107,8 +120,23 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 					blockY := (sectionY * 16) + y
 
 					// 7. Calculate Noise Value
-					noiseValue := noise.Sample2D(float64(chunkX*16+x)/30, float64(chunkZ*16+z)/30)
-					surfaceY := int(float64(100) + (noiseValue * 20))
+					//noiseValue := noise.Sample2D(float64(chunkX*16+x)/50, float64(chunkZ*16+z)/50)
+					continentalnesNoiseValue := continentalnesNoise.Sample2D(float64(chunkX*16+x)/60, float64(chunkZ*16+z)/60)
+
+					continentalnesHeight := 100.0
+					if continentalnesNoiseValue <= 0.3 {
+						m := (100.0 - 50.0) / (0.3 + 1.0)
+						b := 50.0 - m*(-1.0)
+						continentalnesHeight = m*continentalnesNoiseValue + b
+					} else if continentalnesNoiseValue <= 0.4 {
+						m := (150.0 - 100.0) / (0.4 - 0.3)
+						b := 100.0 - m*(0.3)
+						continentalnesHeight = m*continentalnesNoiseValue + b
+					} else if continentalnesNoiseValue <= 1 {
+						continentalnesHeight = 150.0
+					}
+
+					surfaceY := int(continentalnesHeight /*+(noiseValue * 50)*/)
 
 					// 8. Determine Block Type based on Noise
 					var finalPaletteIndex int
@@ -122,7 +150,11 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 							finalPaletteIndex = granitePaletteIndex
 						}
 					} else {
-						finalPaletteIndex = airPaletteIndex
+						if blockY > 62 {
+							finalPaletteIndex = airPaletteIndex
+						} else {
+							finalPaletteIndex = waterPaletteIndex
+						}
 					}
 
 					// Pack the palette index into the current int64
