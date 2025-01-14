@@ -84,7 +84,7 @@ func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player,
 	}
 	*/
 
-	zero_zero_chunk := chunk_generator.GenerateChunk(0, 0, 0)
+	zero_zero_chunk := chunk_generator.GenerateChunk(0, 0, 200)
 	chunkPacket := clientbound.NewChunkDataAndUpdateLightPacket_1_21_FromChunkStruct(zero_zero_chunk, p)
 	chunkPacket.GetPacket().Send(p)
 
@@ -104,7 +104,7 @@ func handle_serverbound_acknowledge_finish_configuration_packet(p player.Player,
 			if x == 0 && y == 0 {
 				continue
 			}
-			chunk := chunk_generator.GenerateChunk(int32(x), int32(y), 0)
+			chunk := chunk_generator.GenerateChunk(int32(x), int32(y), 200)
 			/*if x == 0 && y == 0 {
 				fmt.Fprintln(writer, "----------------")
 				fmt.Fprintln(writer, "LOADED CHUNK X POS:", loadedChunk.XPos, "Z POS:", loadedChunk.ZPos, " Y POS:", loadedChunk.YPos)

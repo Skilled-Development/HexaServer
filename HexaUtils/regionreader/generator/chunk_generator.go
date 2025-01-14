@@ -45,7 +45,7 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 		}
 	}
 	// 4. Initialize Simplex Noise
-	//noise := NewPerlinNoise()
+	noise := NewPerlinNoise()
 	continentalnesNoise := NewPerlinNoiseOctave(-8, 0.5, 2.0)
 
 	// Populate the hashmap with x, z as keys and y as value
@@ -68,13 +68,20 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 		},
 	}
 
+	grassBlockState := &regionreader.BlockState{
+		Name: "minecraft:grass_block",
+		Properties: map[string]string{
+			"snowy": "false",
+		},
+	}
+
 	// 5. Iterate through Vertical Sections (Y)
 	for sectionY := int32(-4); sectionY < 20; sectionY++ {
 		section := &regionreader.Section{
 			Y: byte(sectionY),
 			BlockStates: &regionreader.BlockStates{
 				Palette: []*regionreader.BlockState{},
-				Data:    make([]int64, 256), // Changed to 256 int64
+				Data:    make([]int64, 4096), // Changed to 4096 int64
 			},
 			Biomes: &regionreader.Biomes{
 				Palette: []string{"minecraft:plains"},
@@ -107,10 +114,17 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 		}
 		waterPaletteIndex := indexOfBlockState(section.BlockStates.Palette, waterBlockState)
 
+		if !containsBlockState(section.BlockStates.Palette, grassBlockState) {
+			section.BlockStates.Palette = append(section.BlockStates.Palette, grassBlockState)
+		}
+		grassPaletteIndex := indexOfBlockState(section.BlockStates.Palette, grassBlockState)
+
 		// 6. Iterate through Blocks within the Section (Y, Z, X)
 		blockIndex := 0
 		currentInt := int64(0)
 		bitOffset := 0
+
+		heightmap := make(map[[2]int]int)
 
 		for y := int32(0); y < 16; y++ {
 			for z := int32(0); z < 16; z++ {
@@ -120,7 +134,7 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 					blockY := (sectionY * 16) + y
 
 					// 7. Calculate Noise Value
-					//noiseValue := noise.Sample2D(float64(chunkX*16+x)/50, float64(chunkZ*16+z)/50)
+					noiseValue := noise.Sample2D(float64(chunkX*16+x)/50, float64(chunkZ*16+z)/50)
 					continentalnesNoiseValue := continentalnesNoise.Sample2D(float64(chunkX*16+x)/60, float64(chunkZ*16+z)/60)
 
 					continentalnesHeight := 100.0
@@ -136,7 +150,7 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 						continentalnesHeight = 150.0
 					}
 
-					surfaceY := int(continentalnesHeight /*+(noiseValue * 50)*/)
+					surfaceY := int(continentalnesHeight + (noiseValue * 70))
 
 					// 8. Determine Block Type based on Noise
 					var finalPaletteIndex int
@@ -149,6 +163,7 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 						} else {
 							finalPaletteIndex = granitePaletteIndex
 						}
+						heightmap[[2]int{int(x), int(z)}] = int(surfaceY)
 					} else {
 						if blockY > 62 {
 							finalPaletteIndex = airPaletteIndex
@@ -170,6 +185,20 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 					}
 
 				}
+			}
+		}
+		// Iterate through heightmap to change the heightmap at x, heightmap, z to grass, here i want to change the heightmap to grass
+		for k, v := range heightmap {
+			blockX := int32(k[0])
+			blockZ := int32(k[1])
+			surfaceY := int32(v)
+			sectionBlockY := int32(sectionY * 16)
+			if surfaceY >= sectionBlockY && surfaceY < sectionBlockY+16 {
+				localY := surfaceY - sectionBlockY
+				blockIndex := int64(localY*256 + blockZ*16 + blockX)
+				index := blockIndex / 16
+				offset := (blockIndex % 16) * 4
+				section.BlockStates.Data[index] = (section.BlockStates.Data[index] &^ (0xF << offset)) | (int64(grassPaletteIndex) << offset)
 			}
 		}
 
