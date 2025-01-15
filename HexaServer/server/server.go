@@ -87,126 +87,42 @@ func saveImage(img image.Image, filename string) {
 
 // Inicia el servidor en el puerto 25565
 func (s *Server) Start() {
-	fmt.Printf("Objetos en el heap: %v\n", m.HeapObjects)
-	runtime.ReadMemStats(&m)
 	go func() {
 		http.ListenAndServe("localhost:6060", nil)
 	}()
 
-	runtime.ReadMemStats(&m)
-	fmt.Printf("Objetos en el heap: %v\n", m.HeapObjects)
 	utils.NewDebugger()
-	runtime.ReadMemStats(&m)
-	fmt.Printf("Objetos en el heap: %v\n", m.HeapObjects)
+
 	utils.PrintLog("Starting server...")
 
 	startTime := utils.GetTimeMillis()
 	hexaProtocol_1_21.NewHexaProtocol_1_21()
-	runtime.ReadMemStats(&m)
-	fmt.Printf("Objetos en el heap: %v\n", m.HeapObjects)
+
 	utils.SetDebugTest(false)
 	regionFile, err := region.OpenRegion("worlds/overworld/region/r.0.0.mca")
 	if err != nil {
 		log.Fatalf("Error opening region file: %v", err)
 	}
 	defer regionFile.Close()
-	runtime.ReadMemStats(&m)
-	fmt.Printf("Objetos en el heap: %v\n", m.HeapObjects)
 
 	data.AddRegion(*regionFile)
-	runtime.ReadMemStats(&m)
-	fmt.Printf("Objetos en el heap: %v\n", m.HeapObjects)
 
 	fmt.Println("Region file processed.")
 
 	s.RegistriesManger = config.NewRegistriesManager()
-	runtime.ReadMemStats(&m)
-	fmt.Printf("Objetos en el heap: %v\n", m.HeapObjects)
+
 	s.EntitiesManager = entities_manager.NewEntityManager()
-	runtime.ReadMemStats(&m)
-	fmt.Printf("Objetos en el heap: %v\n", m.HeapObjects)
+
 	s.packet_reader = packet.NewPlayerPacketReader()
-	runtime.ReadMemStats(&m)
-	fmt.Printf("Objetos en el heap: %v\n", m.HeapObjects)
 
 	width := 512
-	height := 256
+	height := 512
 	// Create instances of the Perlin noise generator
 	baseNoise := generator.NewPerlinNoise()
-	continentalNoise := generator.NewPerlinNoiseOctave(3, 0.5, 2.0)
-	temperatureNoise := generator.NewPerlinNoiseOctave(3, 0.8, 2.0)
-	humidityNoise := generator.NewPerlinNoiseOctave(3, 0.8, 2.0)
+	baseNoise.SaveNoiseImage("test/basenoise.png", width, height)
 
-	// generate "Weirdness (Ridges)" image
-	generateNoiseImage(width, height, baseNoise.Sample2D, "weirdness_ridges.png")
+	//generateNoiseImage(width, height, baseNoise.Sample2D, "test/basenoise.png")
 
-	// generate "Peaks & Valleys" image
-	generateNoiseImage(width, height, func(x, z float64) float64 {
-		return generator.Ridge(baseNoise.Sample2D(x, z))
-	}, "peaks_valleys.png")
-
-	// generate "Continentalness" image
-	generateNoiseImage(width, height, func(x, z float64) float64 {
-		return continentalNoise.Sample2D(x*0.1, z*0.1)
-	}, "continentalness.png")
-
-	// generate "Erosion" image, based on the valleys and peaks image
-	erosionNoise := func(x, z float64) float64 {
-		total := 0.0
-		count := 0
-		for dx := -2; dx <= 2; dx++ {
-			for dz := -2; dz <= 2; dz++ {
-				nx := x + float64(dx)
-				nz := z + float64(dz)
-
-				if nx >= 0 && nx < float64(width) && nz >= 0 && nz < float64(height) {
-					total += generator.Ridge(baseNoise.Sample2D(nx, nz))
-					count++
-				}
-			}
-		}
-		return total / float64(count)
-	}
-	generateNoiseImage(width, height, erosionNoise, "erosion.png")
-
-	// generate the "Temperature" image
-	generateNoiseImage(width, height, func(x, z float64) float64 {
-		nx := (x / float64(width)) - 0.5
-		nz := (z / float64(height)) - 0.5
-		bias := 0.8
-		return (temperatureNoise.Sample2D(x*0.05, z*0.05) + bias) * math.Exp(-(nx*nx+nz*nz)*2)
-	}, "temperature.png")
-
-	// generate the "Humidity" image
-	generateNoiseImage(width, height, func(x, z float64) float64 {
-		return humidityNoise.Sample2D(x*0.08, z*0.08)
-	}, "humidity.png")
-
-	// generate the "Biomes" image, this is simplified but it gives a visual example
-	biomeNoise := func(x, z float64) color.RGBA {
-		heightVal := generator.Ridge(baseNoise.Sample2D(x, z))
-		tempVal := (temperatureNoise.Sample2D(x*0.05, z*0.05) + 0.8)
-		humidityVal := humidityNoise.Sample2D(x*0.08, z*0.08)
-		if heightVal > 0.8 {
-			return color.RGBA{150, 150, 150, 255}
-		} else if heightVal > 0.6 && humidityVal < 0.3 && tempVal > 0.5 {
-			return color.RGBA{240, 196, 98, 255}
-		} else if heightVal > 0.6 {
-			return color.RGBA{125, 209, 79, 255}
-		} else if heightVal > 0.3 {
-			return color.RGBA{70, 144, 84, 255}
-		} else {
-			return color.RGBA{54, 106, 194, 255}
-		}
-
-	}
-	biomeImg := image.NewRGBA(image.Rect(0, 0, width, height))
-	for z := 0; z < height; z++ {
-		for x := 0; x < width; x++ {
-			biomeImg.SetRGBA(x, z, biomeNoise(float64(x), float64(z)))
-		}
-	}
-	saveImage(biomeImg, "biomes.png")
 	var err2 error
 	s.listener, err2 = net.Listen("tcp", ":25565")
 	if err2 != nil {

@@ -1,8 +1,13 @@
 package generator
 
 import (
+	"image"
+	"image/color"
+	"image/png"
 	"math"
 	"math/rand"
+	"os"
+	"path/filepath"
 )
 
 type PerlinNoise struct {
@@ -128,4 +133,45 @@ func (p *PerlinNoise) interpolate(a0, a1, w float64) float64 {
 // ridge applies a ridge effect to the noise value
 func Ridge(value float64) float64 {
 	return 1.0 - math.Abs(value)
+}
+func (p *PerlinNoise) SaveNoiseImage(filename string, width, height int) error {
+	// 1. Crear una nueva imagen RGBA.
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	// 2. Generar el noise para cada pixel de la imagen.
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			// Sample2D da un valor entre 0 y 1.
+			noiseValue := p.Sample2D(float64(x)/10, float64(y)/10)
+
+			// Normalizar a un rango de 0-255.
+			grayValue := uint8(noiseValue * 255)
+
+			// Establecer el color del pixel.
+			img.Set(x, y, color.Gray{Y: grayValue})
+		}
+	}
+
+	// 3. Guardar la imagen en un archivo PNG.
+	file, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Crea el directorio si no existe
+	dir := filepath.Dir(filename)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, os.ModePerm)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = png.Encode(file, img)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
