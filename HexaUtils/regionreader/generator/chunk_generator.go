@@ -44,9 +44,10 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 			chunk.Heightmaps["WORLD_SURFACE"][x+z*16] = height
 		}
 	}
+	//TODO: Add more heightmaps
 	// 4. Initialize Simplex Noise
-	noise := NewPerlinNoise()
-	continentalnesNoise := NewPerlinNoiseOctave(-8, 0.5, 2.0)
+	//noise := NewPerlinNoise()
+	//continentalnesNoise := NewPerlinNoiseOctave(-8, 0.5, 2.0)
 
 	// Populate the hashmap with x, z as keys and y as value
 	stoneBlockState := &regionreader.BlockState{
@@ -134,7 +135,7 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 					blockY := (sectionY * 16) + y
 
 					// 7. Calculate Noise Value
-					noiseValue := noise.Sample2D(float64(chunkX*16+x)/50, float64(chunkZ*16+z)/50)
+					/*noiseValue := noise.Sample2D(float64(chunkX*16+x)/50, float64(chunkZ*16+z)/50)
 					continentalnesNoiseValue := continentalnesNoise.Sample2D(float64(chunkX*16+x)/60, float64(chunkZ*16+z)/60)
 
 					continentalnesHeight := 100.0
@@ -146,11 +147,11 @@ func GenerateChunk(chunkX, chunkZ int32, seed int64) *regionreader.Chunk {
 						m := (150.0 - 100.0) / (0.4 - 0.3)
 						b := 100.0 - m*(0.3)
 						continentalnesHeight = m*continentalnesNoiseValue + b
-					} else if continentalnesNoiseValue <= 1 {
+					} else {
 						continentalnesHeight = 150.0
 					}
-
-					surfaceY := int(continentalnesHeight + (noiseValue * 70))
+					*/
+					surfaceY := int(80 /*continentalnesHeight + (noiseValue * 70)*/)
 
 					// 8. Determine Block Type based on Noise
 					var finalPaletteIndex int

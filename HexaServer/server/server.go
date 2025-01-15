@@ -225,18 +225,14 @@ func (s *Server) Start() {
 	for {
 		conn, err2 := s.listener.Accept()
 		if err2 != nil {
-			log.Printf("Error al aceptar conexión: %v", err2)
 			continue
 		}
 
 		// Agregar cliente
 		s.clients[conn.RemoteAddr().String()] = conn
-		println("Nuevo cliente conectado: %s\n", conn.RemoteAddr())
-
 		p := s.EntitiesManager.CreatePlayer(conn)
 		player, ok := p.(*player.Player)
 		if !ok {
-			log.Printf("Error al convertir el jugador: %v\n", conn.RemoteAddr())
 			conn.Close()
 			continue
 		}
@@ -254,7 +250,6 @@ func (s *Server) handleClient(Player *player.Player) {
 		// Lee los paquetes del cliente
 		n, err := conn.Read(buffer)
 		if err != nil {
-			log.Printf("Error al leer del cliente %s: %v\n", conn.RemoteAddr(), err)
 			conn.Close()
 			s.EntitiesManager.RemovePlayer(Player)
 			return

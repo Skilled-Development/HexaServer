@@ -10,6 +10,7 @@ import (
 	"HexaUtils/entities/player"
 	packet_utils "HexaUtils/packets/utils"
 	config "HexaUtils/server/config"
+	"fmt"
 )
 
 var packetQueue []QueuedPacket
@@ -43,10 +44,30 @@ func handlePackets(player player.Player, packet Packet_1_21, allPlayers []player
 		handle_serverbound_player_command_packet(player, p, allPlayers)
 	case serverbound_play.SwingArmPacket_1_21:
 		handle_serverbound_swing_arm_packet(player, p, allPlayers)
+	case serverbound_play.InteractPacket_1_21:
+		handle_serverbound_interact_packet(player, p, allPlayers)
 	default:
 		/*fmt.Println("Paquete desconocido recibido", packet.GetPacket().GetPacketID())
 		fmt.Printf("Packet type: %T\n", packet)*/
 	}
+}
+
+func handle_serverbound_interact_packet(player player.Player, p serverbound_play.InteractPacket_1_21, allPlayers []player.Player) {
+	entityID := p.GetEntityID()
+	interactionType := p.GetType()
+	targetX := p.GetTargetX()
+	targetY := p.GetTargetY()
+	targetZ := p.GetTargetZ()
+	hand := p.GetHand()
+	sneaking := p.GetSneaking()
+	println("Interact packet received")
+	println("Entity ID:", entityID)
+	println("Interaction type:", interactionType)
+	println("Target X:", targetX)
+	println("Target Y:", targetY)
+	println("Target Z:", targetZ)
+	println("Hand:", hand)
+	println("Sneaking:", sneaking)
 }
 
 func handle_serverbound_swing_arm_packet(playerP player.Player, p serverbound_play.SwingArmPacket_1_21, allPlayers []player.Player) {
@@ -86,11 +107,20 @@ func ReadPlayStatePacket(server_config *config.ServerConfig, p player.Player, le
 		create_player_command_packet(p, pack)
 	case 0x36:
 		create_swing_arm_packet(p, pack)
+	case 0x16:
+		create_interact_packet(p, pack)
 	default:
-		/*println("Unknown packet ID:", fmt.Sprintf("0x%X", packet_id))
-		println("Unknown packet ID:", packet_id)*/
+		println("Unknown packet ID:", fmt.Sprintf("0x%X", packet_id))
 	}
 
+}
+
+func create_interact_packet(p player.Player, pack packet_utils.PacketReader) {
+	interact_packet, ok := serverbound_play.ReadInteractPacket_1_21(pack)
+	if !ok {
+		return
+	}
+	EnqueuePacket(p, interact_packet)
 }
 
 func create_swing_arm_packet(p player.Player, pack packet_utils.PacketReader) {
